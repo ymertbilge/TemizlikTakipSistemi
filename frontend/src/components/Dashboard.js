@@ -128,9 +128,9 @@ const Dashboard = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
-        {userData?.role === 'admin' ? 'Admin Dashboard' : 'Routeman Dashboard'}
-      </Typography>
+              <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
+          {userData?.role === 'admin' ? 'Admin Paneli' : 'Routeman Paneli'}
+        </Typography>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>

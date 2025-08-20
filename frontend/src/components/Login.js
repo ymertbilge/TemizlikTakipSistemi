@@ -7,8 +7,7 @@ import {
   Paper,
   Alert,
   CircularProgress,
-  Container,
-  Link
+  Container
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -21,7 +20,6 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showDefaultCredentials, setShowDefaultCredentials] = useState(false);
 
   // Eğer kullanıcı zaten giriş yapmışsa yönlendir
   useEffect(() => {
@@ -60,12 +58,6 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDefaultAdminLogin = () => {
-    setEmail('admin@dogusotomat.com');
-    setPassword('Dogusotomat.12');
-    setError('');
   };
 
   // Auth loading durumunda
@@ -184,41 +176,6 @@ const Login = () => {
             <Typography variant="body2" color="textSecondary" align="center">
               Sadece yetkili kullanıcılar giriş yapabilir
             </Typography>
-
-            {/* Debug/Test için varsayılan admin bilgileri */}
-            <Box sx={{ mt: 2, textAlign: 'center' }}>
-              <Link
-                component="button"
-                type="button"
-                variant="body2"
-                onClick={() => setShowDefaultCredentials(!showDefaultCredentials)}
-                sx={{ cursor: 'pointer' }}
-              >
-                {showDefaultCredentials ? 'Test bilgilerini gizle' : 'Test admin bilgilerini göster'}
-              </Link>
-              
-              {showDefaultCredentials && (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  <Typography variant="body2" gutterBottom>
-                    <strong>Varsayılan Admin Hesabı:</strong>
-                  </Typography>
-                  <Typography variant="body2" gutterBottom>
-                    Email: admin@dogusotomat.com
-                  </Typography>
-                  <Typography variant="body2" gutterBottom>
-                    Şifre: Dogusotomat.12
-                  </Typography>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={handleDefaultAdminLogin}
-                    sx={{ mt: 1 }}
-                  >
-                    Bu bilgileri kullan
-                  </Button>
-                </Alert>
-              )}
-            </Box>
           </Box>
         </Paper>
       </Box>

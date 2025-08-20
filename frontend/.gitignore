@@ -37,6 +37,11 @@ yarn-error.log*
 firebase-debug.log
 firebase-debug.*.log
 
+# Netlify
+.netlify/
+.env.netlify
+netlify.toml
+
 # IDE
 .vscode/
 .idea/

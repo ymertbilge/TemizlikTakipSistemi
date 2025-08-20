@@ -7,6 +7,7 @@ Bu proje, Doğuş Otomat'ın dondurma otomatlarının routeman ekibinin otomat k
 - **Genel Kontrol Listesi**: Dondurma otomatının temel işlevlerinin kontrolü
 - **Temizlik Kontrol Listesi**: Temizlik işlemlerinin takibi
 - **Fotoğraf Yükleme**: Öncesi, sonrası ve arıza fotoğrafları
+- **Otomatik Veri Yönetimi**: Tüm verilerin otomatik yüklenmesi
 - **Tarih ve Saat Takibi**: Her işlem için zaman damgası
 - **Model Seçimi**: Farklı otomat modelleri için rapor oluşturma
 - **Not Ekleme**: Ek gözlemler ve öneriler
@@ -167,15 +168,9 @@ Eğer `auth/invalid-credential` hatası alıyorsanız:
 2. Frontend'in backend API'yi kullandığından emin olun
 3. Varsayılan kullanıcı bilgilerini kullanın
 
-### Backend Bağlantı Hatası
-1. Backend'in çalıştığını kontrol edin: `http://localhost:5000/api/health`
-2. Port 5000'in kullanılabilir olduğundan emin olun
-3. CORS ayarlarını kontrol edin
-
 ### Frontend Bağlantı Hatası
 1. Frontend'in çalıştığını kontrol edin: `http://localhost:3000`
-2. Backend API URL'ini kontrol edin
-3. Browser console'da hata mesajlarını kontrol edin
+2. Browser console'da hata mesajlarını kontrol edin
 
 ## Lisans
 
@@ -188,5 +183,5 @@ Bu proje Doğuş Otomat için özel olarak geliştirilmiştir.
 - Rate limiting ve security middleware production için yeterli olmalı.
 ## Katkıda Bulunanlar
 
-- [Yağız Mert Bilge](https://github.com/ymertbilge) –
-- [Kutay Kılıç](https://github.com/kutaykilicai) –
+- [Yağız Mert Bilge](https://github.com/ymertbilge)
+- [Kutay Kılıç](https://github.com/kutaykilicai)

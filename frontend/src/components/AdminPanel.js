@@ -330,7 +330,7 @@ const AdminPanel = () => {
     <Container maxWidth="xl">
       <Box sx={{ mt: 3, mb: 3 }}>
         <Typography variant="h4" gutterBottom>
-          Admin Panel
+          Admin Paneli
         </Typography>
         <Typography variant="body1" color="textSecondary">
           Kullanıcı yönetimi ve sistem kontrolü

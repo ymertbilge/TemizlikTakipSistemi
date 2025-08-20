@@ -53,7 +53,7 @@ const Header = () => {
                   backgroundColor: location.pathname === '/admin' ? 'rgba(255,255,255,0.1)' : 'transparent' 
                 }}
               >
-                Admin Panel
+                Admin Paneli
               </Button>
               <Button
                 color="inherit"
@@ -124,10 +124,10 @@ const Header = () => {
             Ana Sayfa
           </MenuItem>
           {userData.role === 'admin' && (
-            <MenuItem onClick={() => handleNavigate('/admin')}>
-              <AdminPanelSettings sx={{ mr: 1 }} />
-              Admin Panel
-            </MenuItem>
+                      <MenuItem onClick={() => handleNavigate('/admin')}>
+            <AdminPanelSettings sx={{ mr: 1 }} />
+            Admin Paneli
+          </MenuItem>
           )}
           {userData.role === 'routeman' && (
             <MenuItem onClick={() => handleNavigate('/new-report')}>
