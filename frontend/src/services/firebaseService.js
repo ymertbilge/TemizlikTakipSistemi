@@ -424,11 +424,8 @@ export const photoService = {
 
   // Fotoğraf URL'ini sil
   async deletePhotoUrl(photoUrl) {
-    try {
-      return { success: true, message: 'Fotoğraf silindi' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    // Fotoğraf silme işlemi burada yapılabilir
+    return { success: true, message: 'Fotoğraf silindi' };
   }
 };
 
