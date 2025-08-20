@@ -1,0 +1,13 @@
+{
+  "name": "dogus-otomat-temizlik-takip-sistemi",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm run build:netlify",
+    "build:netlify": "cd frontend && npm run build:netlify",
+    "install:frontend": "cd frontend && npm install"
+  },
+  "workspaces": [
+    "frontend"
+  ]
+}
