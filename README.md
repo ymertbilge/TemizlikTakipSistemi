@@ -186,3 +186,7 @@ Bu proje Doğuş Otomat için özel olarak geliştirilmiştir.
 - Backend şu anda in-memory veri saklama kullanıyor. Production'da PostgreSQL veya MongoDB gibi bir database kullanılmalı.
 - File upload sistemi şu anda local storage kullanıyor. Production'da AWS S3 veya benzeri bir cloud storage kullanılmalı.
 - Rate limiting ve security middleware production için yeterli olmalı.
+## Katkıda Bulunanlar
+
+- [Yağız Mert Bilge](https://github.com/ymertbilge) –
+- [Kutay Kılıç](https://github.com/kutaykilicai) –
