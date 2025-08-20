@@ -7,16 +7,14 @@ Bu proje, Doğuş Otomat'ın dondurma otomatlarının routeman ekibinin otomat k
 - **Genel Kontrol Listesi**: Dondurma otomatının temel işlevlerinin kontrolü
 - **Temizlik Kontrol Listesi**: Temizlik işlemlerinin takibi
 - **Fotoğraf Yükleme**: Öncesi, sonrası ve arıza fotoğrafları
-- **Otomatik NextCloud Entegrasyonu**: Tüm verilerin otomatik yüklenmesi
 - **Tarih ve Saat Takibi**: Her işlem için zaman damgası
 - **Model Seçimi**: Farklı otomat modelleri için rapor oluşturma
 - **Not Ekleme**: Ek gözlemler ve öneriler
-- **JWT Tabanlı Authentication**: Güvenli kullanıcı girişi
 - **Admin Panel**: Kullanıcı yönetimi ve rapor takibi
 
 ## Desteklenen Modeller
 
-- TCN-ICE-D2-133(22SP) (Varsayılan)
+- Dogi Soft Ice Cream
 - Diğer modeller
 
 ## Kurulum
@@ -58,24 +56,11 @@ REACT_APP_FIREBASE_DATABASE_URL=your_database_url
 REACT_APP_FIREBASE_PROJECT_ID=your_project_id
 ```
 
-## Kullanım
-
-### Varsayılan Kullanıcı Bilgileri
-
-**Admin Hesabı:**
-- Email: `admin@dogusotomat.com`
-- Şifre: `Admin123!`
-
-**Routeman Test Hesabı:**
-- Email: `routeman@dogusotomat.com`
-- Şifre: `Admin123!`
-
 ### Giriş Yapma
 
 1. Tarayıcıda `http://localhost:3000` adresine gidin
-2. Yukarıdaki kullanıcı bilgilerinden birini kullanarak giriş yapın
-3. Admin hesabı ile giriş yaparsanız admin paneline erişim kazanırsınız
-4. Routeman hesabı ile giriş yaparsanız rapor oluşturma sayfasına yönlendirilirsiniz
+2. Admin hesabı ile giriş yaparsanız admin paneline erişim kazanırsınız
+3. Routeman hesabı ile giriş yaparsanız rapor oluşturma sayfasına yönlendirilirsiniz
 
 ### Rapor Oluşturma
 
@@ -115,7 +100,6 @@ Admin hesabı ile giriş yaptığınızda:
 ## Teknik Detaylar
 
 ### Backend (Node.js + Express)
-- JWT tabanlı authentication
 - RESTful API endpoints
 - Dosya upload sistemi
 - In-memory veri saklama (production'da database kullanılmalı)
@@ -132,7 +116,6 @@ Admin hesabı ile giriş yaptığınızda:
 - Backend API entegrasyonu
 
 ### Authentication
-- JWT token tabanlı
 - Role-based access control (Admin/Routeman)
 - Secure password hashing (bcrypt)
 - Token expiration (24 saat)
@@ -202,5 +185,4 @@ Bu proje Doğuş Otomat için özel olarak geliştirilmiştir.
 
 - Backend şu anda in-memory veri saklama kullanıyor. Production'da PostgreSQL veya MongoDB gibi bir database kullanılmalı.
 - File upload sistemi şu anda local storage kullanıyor. Production'da AWS S3 veya benzeri bir cloud storage kullanılmalı.
-- JWT secret key production'da environment variable olarak saklanmalı.
 - Rate limiting ve security middleware production için yeterli olmalı.
