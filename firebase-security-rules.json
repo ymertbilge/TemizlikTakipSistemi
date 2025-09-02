@@ -1,21 +1,14 @@
-// firebase-security-rules.json
-// Firebase Realtime Database Security Rules
 {
   "rules": {
-    // Root seviye erişim sadece authenticated kullanıcılar için
     ".read": false,
     ".write": false,
     
     "temizlikTakip": {
-      // Users tablosu
       "users": {
         "$userId": {
-          // Sadece kendi verisini okuyabilir
           ".read": "auth != null && auth.uid == $userId",
-          // Sadece admin veya kendisi yazabilir
           ".write": "auth != null && (auth.uid == $userId || root.child('temizlikTakip/users/' + auth.uid + '/role').val() == 'admin')",
           
-          // User data validation
           ".validate": "newData.hasChildren(['email', 'name', 'role']) && newData.child('email').isString() && newData.child('name').isString() && (newData.child('role').val() == 'admin' || newData.child('role').val() == 'routeman' || newData.child('role').val() == 'viewer')",
           
           "email": {
@@ -47,20 +40,15 @@
           }
         },
         
-        // Admin tüm kullanıcıları görebilir
         ".read": "auth != null && root.child('temizlikTakip/users/' + auth.uid + '/role').val() == 'admin'"
       },
       
-      // Reports tablosu
       "reports": {
         "$reportId": {
-          // Rapor sahibi veya admin okuyabilir
           ".read": "auth != null && (data.child('userId').val() == auth.uid || root.child('temizlikTakip/users/' + auth.uid + '/role').val() == 'admin' || root.child('temizlikTakip/users/' + auth.uid + '/role').val() == 'viewer')",
           
-          // Sadece rapor sahibi veya admin yazabilir
           ".write": "auth != null && (data.child('userId').val() == auth.uid || root.child('temizlikTakip/users/' + auth.uid + '/role').val() == 'admin' || !data.exists())",
           
-          // Yeni rapor oluştururken userId kontrolü
           ".validate": "!data.exists() && newData.child('userId').val() == auth.uid || data.exists() && newData.child('userId').val() == data.child('userId').val()",
           
           "userId": {
@@ -99,7 +87,10 @@
             ".validate": "newData.isString()"
           },
           
-          // Arıza alanları
+          "reportType": {
+            ".validate": "newData.val() == 'cleaning' || newData.val() == 'fridge'"
+          },
+          
           "hasIssue": {
             ".validate": "newData.isBoolean()"
           },
@@ -120,7 +111,6 @@
             ".validate": "newData.isString()"
           },
           
-          // Zayi alanları
           "hasWaste": {
             ".validate": "newData.isBoolean()"
           },
@@ -167,8 +157,8 @@
           "slots": {
             ".validate": "newData.hasChildren()",
             "$slotIndex": {
-              ".validate": "newData.hasChildren(['slotNumber', 'commodity', 'quantity', 'expiryDate', 'batchNumber'])",
-              "slotNumber": { ".validate": "newData.isNumber()" },
+              ".validate": "newData.hasChildren(['id', 'commodity', 'quantity', 'expiryDate', 'batchNumber'])",
+              "id": { ".validate": "newData.isNumber()" },
               "commodity": { ".validate": "newData.isString()" },
               "quantity": { ".validate": "newData.isString()" },
               "expiryDate": { ".validate": "newData.isString()" },
@@ -197,21 +187,16 @@
           }
         },
         
-        // Admin ve viewer tüm raporları görebilir, routeman sadece kendi raporlarını
         ".read": "auth != null",
         ".indexOn": ["userId", "createdAt", "status"]
       },
       
-      // CommodityList tablosu - YENİ EKLENEN
       "commodityList": {
         "$commodityId": {
-          // Tüm authenticated kullanıcılar okuyabilir
           ".read": "auth != null",
           
-          // Sadece admin yazabilir
           ".write": "auth != null && root.child('temizlikTakip/users/' + auth.uid + '/role').val() == 'admin'",
           
-          // Commodity data validation
           ".validate": "newData.hasChildren(['Commodity code', 'Product name'])",
           
           "Commodity code": {
@@ -255,13 +240,10 @@
           }
         },
         
-        // Tüm authenticated kullanıcılar commodity listesini görebilir
         ".read": "auth != null",
         
-        // Sadece admin yeni commodity ekleyebilir
         ".write": "auth != null && root.child('temizlikTakip/users/' + auth.uid + '/role').val() == 'admin'",
         
-        // Indexing for better performance
         ".indexOn": ["Commodity code", "Product name", "Supplier"]
       }
     }

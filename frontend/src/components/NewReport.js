@@ -149,7 +149,6 @@ const NewReport = () => {
     notes: '',
     // Yeni alanlar
     cupStock: '',
-    waste: '',
     stockInfo: ''
   });
 
@@ -481,7 +480,6 @@ const NewReport = () => {
         notes: formData.notes.trim(),
         // Yeni alanlar
         cupStock: formData.cupStock.trim(),
-        waste: formData.waste.trim(),
         stockInfo: formData.stockInfo.trim(),
         // Arıza bilgileri
         hasIssue: hasIssue,
@@ -766,7 +764,7 @@ const NewReport = () => {
           </Paper>
         </Grid>
             {/* Yeni alanlar */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Bardak Stok"
@@ -776,17 +774,7 @@ const NewReport = () => {
                 type="number"
               />
             </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Zayi"
-                value={formData.waste}
-                onChange={(e) => handleInputChange('waste', e.target.value)}
-                placeholder="Zayi miktarı"
-                type="number"
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Yedek/Stok Bilgisi"
@@ -805,16 +793,23 @@ const NewReport = () => {
             <Grid container spacing={2} sx={{ mb: 3 }}>
               {equipmentChecklist.map((item) => (
                 <Grid item xs={12} md={6} key={item.id}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={item.completed}
-                        onChange={() => toggleChecklistItem('equipment', item.id)}
-                        color="primary"
-                      />
-                    }
-                    label={item.text}
-                  />
+                  <Box>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={item.completed}
+                          onChange={() => toggleChecklistItem('equipment', item.id)}
+                          color="primary"
+                        />
+                      }
+                      label={item.text}
+                    />
+                    {item.completed && item.completedAt && (
+                      <Typography variant="caption" color="success.main" sx={{ ml: 4, display: 'block' }}>
+                        ✅ Tamamlandı: {new Date(item.completedAt).toLocaleString('tr-TR')}
+                      </Typography>
+                    )}
+                  </Box>
                 </Grid>
               ))}
             </Grid>
@@ -827,16 +822,23 @@ const NewReport = () => {
             <Grid container spacing={2} sx={{ mb: 3 }}>
               {cleaningChecklist.map((item) => (
                 <Grid item xs={12} md={6} key={item.id}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={item.completed}
-                        onChange={() => toggleChecklistItem('cleaning', item.id)}
-                        color="primary"
-                      />
-                    }
-                    label={item.text}
-                  />
+                  <Box>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={item.completed}
+                          onChange={() => toggleChecklistItem('cleaning', item.id)}
+                          color="primary"
+                        />
+                      }
+                      label={item.text}
+                    />
+                    {item.completed && item.completedAt && (
+                      <Typography variant="caption" color="success.main" sx={{ ml: 4, display: 'block' }}>
+                        ✅ Tamamlandı: {new Date(item.completedAt).toLocaleString('tr-TR')}
+                      </Typography>
+                    )}
+                  </Box>
                 </Grid>
               ))}
             </Grid>

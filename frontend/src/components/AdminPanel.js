@@ -1213,11 +1213,6 @@ const AdminPanel = () => {
                                                 <strong>Bardak Stok:</strong> {report.cupStock}
                                               </Typography>
                                             )}
-                                            {report.waste !== undefined && (
-                                              <Typography variant="body2">
-                                                <strong>Zayi:</strong> {report.waste}
-                                              </Typography>
-                                            )}
                                             {report.stockInfo !== undefined && (
                                               <Typography variant="body2">
                                                 <strong>Yedek/Stok:</strong> {report.stockInfo}
@@ -2042,7 +2037,6 @@ const AdminPanel = () => {
 
                       {/* Yeni alanlar */}
                       {(selectedReport.cupStock !== undefined || 
-                        selectedReport.waste !== undefined || 
                         selectedReport.stockInfo !== undefined) && (
                         <>
                           <Divider sx={{ my: 2 }} />
@@ -2052,11 +2046,6 @@ const AdminPanel = () => {
                           {selectedReport.cupStock !== undefined && (
                             <Typography variant="body2">
                               <strong>Bardak Stok:</strong> {selectedReport.cupStock}
-                            </Typography>
-                          )}
-                          {selectedReport.waste !== undefined && (
-                            <Typography variant="body2">
-                              <strong>Zayi:</strong> {selectedReport.waste}
                             </Typography>
                           )}
                           {selectedReport.stockInfo !== undefined && (
