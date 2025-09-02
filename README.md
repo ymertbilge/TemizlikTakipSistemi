@@ -1,187 +1,91 @@
-# Doğuş Otomat Temizlik ve Dolum Takip Sistemi
+# Doğuş Otomat Temizlik Takip Sistemi
 
-Bu proje, Doğuş Otomat'ın dondurma otomatlarının routeman ekibinin otomat kontrollerini ve temizlik işlemlerini takip etmek için geliştirilmiş bir web uygulamasıdır.
+Bu proje, Doğuş Otomat için geliştirilmiş bir temizlik ve dolum takip sistemidir.
 
 ## Özellikler
 
-- **Genel Kontrol Listesi**: Dondurma otomatının temel işlevlerinin kontrolü
-- **Temizlik Kontrol Listesi**: Temizlik işlemlerinin takibi
-- **Fotoğraf Yükleme**: Öncesi, sonrası ve arıza fotoğrafları
-- **Otomatik Veri Yönetimi**: Tüm verilerin otomatik yüklenmesi
-- **Tarih ve Saat Takibi**: Her işlem için zaman damgası
-- **Model Seçimi**: Farklı otomat modelleri için rapor oluşturma
-- **Not Ekleme**: Ek gözlemler ve öneriler
-- **Admin Panel**: Kullanıcı yönetimi ve rapor takibi
+### Genel Özellikler
+- **Kullanıcı Yönetimi**: Admin ve operasyon sorumlusu rolleri
+- **Rapor Oluşturma**: Dondurma temizlik ve taze dolap dolum raporları
+- **Fotoğraf Yükleme**: Öncesi, sonrası ve sorun fotoğrafları
+- **Dashboard**: Kullanıcı bazlı rapor görüntüleme
 
-## Desteklenen Modeller
+### Yeni Eklenen Özellikler
 
-- Dogi Soft Ice Cream
-- Diğer modeller
+#### 1. Ürün Yönetimi
+- **Admin Paneli**: Ürün ekleme, düzenleme ve silme
+- **JSON İçe Aktarma**: Mevcut ürün verilerini JSON dosyasından içe aktarma
+- **Dinamik Ürün Listesi**: Firebase'den yüklenen güncel ürün listesi
+- **Ürün Detayları**: Kod, ad, fiyat, tedarikçi, tip ve açıklama bilgileri
+
+#### 2. Gelişmiş Rapor Filtreleme
+- **Tarih Filtresi**: Başlangıç ve bitiş tarihine göre rapor filtreleme
+- **Rapor Türü Filtresi**: Dondurma temizlik ve taze dolap dolum raporları
+- **Otomatik Sıralama**: En yeni raporlar her zaman en üstte görünür
+
+#### 3. Admin Panel Geliştirmeleri
+- **Ürün Yönetimi Sekmesi**: Tam CRUD işlemleri
+- **Toplu İçe Aktarma**: JSON dosyasından ürün verilerini toplu yükleme
+- **Gelişmiş Filtreleme**: Tarih ve rapor türü kombinasyonu
+- **Kullanıcı Yönetimi**: Kullanıcı ekleme, düzenleme ve durum kontrolü
 
 ## Kurulum
 
-### Frontend Kurulumu
+1. Projeyi klonlayın
+2. `npm install` komutunu çalıştırın
+3. Firebase yapılandırmasını `src/config/firebase.js` dosyasında ayarlayın
+4. `npm start` ile uygulamayı başlatın
 
-```bash
-cd frontend
-npm install
-npm start
-```
+## Kullanım
 
-Frontend varsayılan olarak `http://localhost:3000` portunda çalışacaktır.
+### Admin Kullanıcıları
+1. **Ürün Yönetimi**: Admin panelinde "Ürün Yönetimi" sekmesini kullanın
+2. **JSON İçe Aktarma**: Mevcut ürün verilerini JSON dosyasından yükleyin
+3. **Rapor Filtreleme**: Tarih aralığı ve rapor türü ile filtreleme yapın
 
-### Production Build
-
-```bash
-cd frontend
-npm run build:prod
-```
-
-Production build için:
-- Source map'ler devre dışı
-- Console log'lar kaldırıldı
-- Environment variables validasyonu
-- Güvenlik önlemleri aktif
-
-### Environment Variables
-
-Production için `.env.production` dosyası oluşturun:
-
-```bash
-# .env.production
-NODE_ENV=production
-GENERATE_SOURCEMAP=false
-REACT_APP_FIREBASE_API_KEY=your_api_key
-REACT_APP_FIREBASE_AUTH_DOMAIN=your_domain
-REACT_APP_FIREBASE_DATABASE_URL=your_database_url
-REACT_APP_FIREBASE_PROJECT_ID=your_project_id
-```
-
-### Giriş Yapma
-
-1. Tarayıcıda `http://localhost:3000` adresine gidin
-2. Admin hesabı ile giriş yaparsanız admin paneline erişim kazanırsınız
-3. Routeman hesabı ile giriş yaparsanız rapor oluşturma sayfasına yönlendirilirsiniz
-
-### Rapor Oluşturma
-
-1. Ana sayfada "Yeni Rapor Oluşturmaya Başla" butonuna tıklayın
-2. Lokasyon bilgisini girin
-3. Otomat modelini seçin
-4. Tarih ve saati kontrol edin
-5. Genel kontrol listesini doldurun:
-   - Otomat çalışma durumu
-   - Dondurma çıkış kontrolü
-   - Ekran ve aydınlatma
-   - Soğutma sistemi
-   - Dondurma sıcaklığı ve kalitesi
-   - Kapak fonksiyonları
-6. Temizlik kontrol listesini doldurun:
-   - Dış yüzey temizliği
-   - Cam yüzeyler
-   - Dondurma çıkış bölümü
-   - Kapak ve menteşe
-   - Çevre alanı
-   - Dondurma kalıntıları
-7. Gerekli fotoğrafları ekleyin:
-   - Öncesi fotoğraflar
-   - Sonrası fotoğraflar
-   - Arıza/Problem fotoğrafları (varsa)
-8. Ek notlar ekleyin
-9. "Raporu Oluştur ve Yükle" butonuna tıklayın
-
-### Admin Panel
-
-Admin hesabı ile giriş yaptığınızda:
-
-1. **Kullanıcı Ekle**: Yeni kullanıcı oluşturma
-2. **Kullanıcı Listesi**: Mevcut kullanıcıları görüntüleme ve yönetme
-3. **Raporlar**: Tüm raporları görüntüleme ve CSV olarak dışa aktarma
+### Operasyon Sorumluları
+1. **Rapor Oluşturma**: Yeni rapor oluşturma sayfalarını kullanın
+2. **Dinamik Ürün Listesi**: Güncel ürün listesinden seçim yapın
+3. **Fotoğraf Yükleme**: Zorunlu öncesi ve sonrası fotoğrafları ekleyin
 
 ## Teknik Detaylar
 
-### Backend (Node.js + Express)
-- RESTful API endpoints
-- Dosya upload sistemi
-- In-memory veri saklama (production'da database kullanılmalı)
-- CORS desteği
-- Rate limiting
-- Security middleware (Helmet)
-
-### Frontend (React + Material-UI)
-- Modern ve responsive tasarım
-- Form validasyonu
-- Fotoğraf önizleme
-- Real-time güncelleme
-- Model seçimi dropdown
-- Backend API entegrasyonu
-
-### Authentication
-- Role-based access control (Admin/Routeman)
-- Secure password hashing (bcrypt)
-- Token expiration (24 saat)
-
-## Klasör Yapısı
-
+### Firebase Yapısı
 ```
-Doğuş Otomat Temizlik ve Dolum Takip Sistemi/
-├── backend/          # Node.js backend
-│   ├── routes/       # API route'ları
-│   │   ├── auth.js   # Authentication routes
-│   │   ├── users.js  # User management routes
-│   │   ├── reports.js # Report management routes
-│   │   └── upload.js # File upload routes
-│   ├── server.js     # Ana server dosyası
-│   ├── package.json  # Backend dependencies
-│   └── env.example   # Environment variables örneği
-├── frontend/         # React frontend
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Header.js
-│   │   │   ├── Dashboard.js
-│   │   │   ├── Login.js
-│   │   │   ├── AdminPanel.js
-│   │   │   └── NewReport.js
-│   │   ├── services/
-│   │   │   ├── api.js          # Firebase API (eski)
-│   │   │   └── backendApi.js   # Backend API (yeni)
-│   │   ├── contexts/
-│   │   │   └── AuthContext.js
-│   │   ├── App.js
-│   │   └── index.js
-│   └── package.json  # Frontend dependencies
-└── README.md
+temizlikTakip/
+├── reports/          # Raporlar
+├── users/            # Kullanıcılar
+└── commodityList/    # Ürün listesi
 ```
 
-## Gereksinimler
+### Ürün Veri Yapısı
+```json
+{
+  "Commodity code": "3333",
+  "Product name": "Kruvasan",
+  "Unit price": "25",
+  "Cost price": "8",
+  "Supplier": "UNO",
+  "Specs": "no",
+  "Type": "Pastane Ürünü",
+  "Description": ""
+}
+```
 
-- Node.js >= 16.0.0
-- npm veya yarn
-- Modern web tarayıcısı
-- Backend API çalışır durumda olmalı
+## Geliştirme
 
-## Sorun Giderme
+### Yeni Özellik Ekleme
+1. Firebase servislerini `src/services/firebaseService.js` dosyasında güncelleyin
+2. Bileşenleri `src/components/` klasöründe oluşturun
+3. Routing'i `src/App.js` dosyasında ayarlayın
 
-### Firebase Authentication Hatası
-Eğer `auth/invalid-credential` hatası alıyorsanız:
-1. Backend'in çalıştığından emin olun (`http://localhost:5000`)
-2. Frontend'in backend API'yi kullandığından emin olun
-3. Varsayılan kullanıcı bilgilerini kullanın
-
-### Frontend Bağlantı Hatası
-1. Frontend'in çalıştığını kontrol edin: `http://localhost:3000`
-2. Browser console'da hata mesajlarını kontrol edin
+### Veri İçe Aktarma
+JSON dosyasından ürün verilerini içe aktarmak için:
+1. Admin paneline giriş yapın
+2. "Ürün Yönetimi" sekmesine gidin
+3. "JSON'dan İçe Aktar" butonunu kullanın
+4. JSON dosyasını seçin
 
 ## Lisans
 
 Bu proje Doğuş Otomat için özel olarak geliştirilmiştir.
-
-## Geliştirici Notları
-
-- Backend şu anda in-memory veri saklama kullanıyor. Production'da PostgreSQL veya MongoDB gibi bir database kullanılmalı.
-- File upload sistemi şu anda local storage kullanıyor. Production'da AWS S3 veya benzeri bir cloud storage kullanılmalı.
-- Rate limiting ve security middleware production için yeterli olmalı.
-## Katkıda Bulunanlar
-
-- [Yağız Mert Bilge](https://github.com/ymertbilge)
-- [Kutay Kılıç](https://github.com/kutaykilicai)

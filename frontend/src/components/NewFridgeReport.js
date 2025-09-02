@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { PhotoCamera, Delete, CloudUpload, Add } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { reportService, photoService } from '../services/firebaseService';
+import { reportService, photoService, commodityService } from '../services/firebaseService';
 import { useAuth } from '../contexts/AuthContext';
 
 // Error Boundary Component - güçlendirilmiş
@@ -94,35 +94,7 @@ const cleanLocation = (location) => {
     .trim();
 };
 
-// Ürün listesi - bu liste backend'den de sağlanabilir
-const commodityList = [
-  "Çikolata",
-  "Bisküvi",
-  "Gazlı İçecek",
-  "Meyve Suyu",
-  "Su",
-  "Kola",
-  "Fıstık",
-  "Cips",
-  "Kraker",
-  "Sakız",
-  "Makarna",
-  "Kahve",
-  "Çay",
-  "Enerji İçeceği",
-  "Soda",
-  "Limonata",
-  "Ayran",
-  "Yoğurt İçecek",
-  "Smoothie",
-  "Kuruyemiş",
-  "Kek",
-  "Pasta",
-  "Sandviç",
-  "Poğaça",
-  "Börek",
-  "Makine Dolum Ürünü"
-];
+// Ürün listesi - Firebase'den yüklenecek
 
 const NewFridgeReport = () => {
   const navigate = useNavigate();
@@ -168,6 +140,9 @@ const NewFridgeReport = () => {
   const [afterPhotos, setAfterPhotos] = useState([]);
   const [issuePhotos, setIssuePhotos] = useState([]);
   
+  // Commodity list state
+  const [commodityList, setCommodityList] = useState([]);
+  
   // Cleanup effect - bellek sızıntılarını önle
   useEffect(() => {
     return () => {
@@ -196,6 +171,85 @@ const NewFridgeReport = () => {
       });
     };
   }, [beforePhotos, afterPhotos, issuePhotos]);
+
+  // Commodity list'i yükle
+  useEffect(() => {
+    const loadCommodities = async () => {
+      try {
+        const result = await commodityService.getAllCommodities();
+        if (result.success && result.commodities && result.commodities.length > 0) {
+          const commodities = result.commodities || [];
+          // Ürün adlarını listeye çevir
+          const commodityNames = commodities.map(commodity => commodity['Product name']).filter(Boolean);
+          setCommodityList(commodityNames);
+        } else {
+          // Firebase'den veri gelmezse varsayılan listeyi kullan
+          console.log('Firebase\'den ürün listesi alınamadı, varsayılan liste kullanılıyor');
+          setCommodityList([
+            "Çikolata",
+            "Bisküvi",
+            "Gazlı İçecek",
+            "Meyve Suyu",
+            "Su",
+            "Kola",
+            "Fıstık",
+            "Cips",
+            "Kraker",
+            "Sakız",
+            "Makarna",
+            "Kahve",
+            "Çay",
+            "Enerji İçeceği",
+            "Soda",
+            "Limonata",
+            "Ayran",
+            "Yoğurt İçecek",
+            "Smoothie",
+            "Kuruyemiş",
+            "Kek",
+            "Pasta",
+            "Sandviç",
+            "Poğaça",
+            "Börek",
+            "Makine Dolum Ürünü"
+          ]);
+        }
+      } catch (error) {
+        console.error('Ürün listesi yüklenemedi:', error);
+        // Fallback: varsayılan liste
+        setCommodityList([
+          "Çikolata",
+          "Bisküvi",
+          "Gazlı İçecek",
+          "Meyve Suyu",
+          "Su",
+          "Kola",
+          "Fıstık",
+          "Cips",
+          "Kraker",
+          "Sakız",
+          "Makarna",
+          "Kahve",
+          "Çay",
+          "Enerji İçeceği",
+          "Soda",
+          "Limonata",
+          "Ayran",
+          "Yoğurt İçecek",
+          "Smoothie",
+          "Kuruyemiş",
+          "Kek",
+          "Pasta",
+          "Sandviç",
+          "Poğaça",
+          "Börek",
+          "Makine Dolum Ürünü"
+        ]);
+      }
+    };
+
+    loadCommodities();
+  }, []);
 
   // userData yüklenene kadar bekle
   if (authLoading || !userData) {

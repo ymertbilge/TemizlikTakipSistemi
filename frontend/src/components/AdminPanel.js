@@ -6,10 +6,11 @@ import {
   FormControl, InputLabel, Select, MenuItem, Switch, FormControlLabel, Tabs, Tab, CircularProgress
 } from '@mui/material';
 import { 
-  Visibility, ExpandMore, ExpandLess, CheckCircle, Cancel, Delete, Download, Edit
+  Visibility, ExpandMore, ExpandLess, CheckCircle, Cancel, Delete, Download, Edit, CloudUpload, Add
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { reportService, userService, authService } from '../services/firebaseService';
+import { reportService, userService, authService, commodityService } from '../services/firebaseService';
+import { importCommoditiesFromJSON } from '../utils/importCommodities';
 
 const AdminPanel = () => {
   const { userData } = useAuth();
@@ -26,6 +27,35 @@ const AdminPanel = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState(null);
   const [reportTypeFilter, setReportTypeFilter] = useState('all'); // 'all', 'iceCream', 'fridge'
+  const [dateFilter, setDateFilter] = useState({ startDate: '', endDate: '' });
+  const [locationFilter, setLocationFilter] = useState('');
+  const [machineSerialFilter, setMachineSerialFilter] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+  
+  // Commodity management states
+  const [commodities, setCommodities] = useState([]);
+  const [newCommodity, setNewCommodity] = useState({
+    'Commodity code': '',
+    'Product name': '',
+    'Unit price': '',
+    'Cost price': '',
+    'Supplier': '',
+    'Specs': '',
+    'Type': '',
+    'Description': ''
+  });
+  const [editingCommodity, setEditingCommodity] = useState(null);
+  const [commodityEditFormOpen, setCommodityEditFormOpen] = useState(false);
+  const [commodityEditFormData, setCommodityEditFormData] = useState({
+    'Commodity code': '',
+    'Product name': '',
+    'Unit price': '',
+    'Cost price': '',
+    'Supplier': '',
+    'Specs': '',
+    'Type': '',
+    'Description': ''
+  });
   
   // Kullanıcı ekleme formu
   const [newUser, setNewUser] = useState({
@@ -73,10 +103,26 @@ const AdminPanel = () => {
     }
   }, []);
 
+  const fetchCommodities = useCallback(async () => {
+    try {
+      const result = await commodityService.getAllCommodities();
+      if (result.success) {
+        setCommodities(result.commodities || []);
+      } else {
+        console.warn('Ürünler yüklenemedi:', result.error);
+        setCommodities([]); // Boş liste olarak ayarla
+      }
+    } catch (error) {
+      console.warn('Ürünler yüklenirken hata oluştu:', error);
+      setCommodities([]); // Boş liste olarak ayarla
+    }
+  }, []);
+
   // Raporları filtrele
   useEffect(() => {
     let filtered = reports;
     
+    // Rapor türüne göre filtrele
     switch (reportTypeFilter) {
       case 'iceCream':
         filtered = reports.filter(report => 
@@ -92,16 +138,80 @@ const AdminPanel = () => {
         filtered = reports;
     }
     
+    // Tarihe göre filtrele
+    if (dateFilter.startDate) {
+      filtered = filtered.filter(report => {
+        const reportDate = new Date(report.createdAt);
+        const startDate = new Date(dateFilter.startDate);
+        return reportDate >= startDate;
+      });
+    }
+    
+    if (dateFilter.endDate) {
+      filtered = filtered.filter(report => {
+        const reportDate = new Date(report.createdAt);
+        const endDate = new Date(dateFilter.endDate);
+        endDate.setHours(23, 59, 59, 999); // Günün sonuna kadar
+        return reportDate <= endDate;
+      });
+    }
+
+    // Lokasyona göre filtrele
+    if (locationFilter.trim()) {
+      filtered = filtered.filter(report => 
+        report.location && report.location.toLowerCase().includes(locationFilter.toLowerCase())
+      );
+    }
+    
+    // Makine seri numarasına göre filtrele
+    if (machineSerialFilter.trim()) {
+      filtered = filtered.filter(report => 
+        report.machineSerialNumber && report.machineSerialNumber.includes(machineSerialFilter)
+      );
+    }
+    
+    // Sıralama
+    filtered.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortConfig.key) {
+        case 'createdAt':
+          aValue = new Date(a.createdAt);
+          bValue = new Date(b.createdAt);
+          break;
+        case 'location':
+          aValue = (a.location || '').toLowerCase();
+          bValue = (b.location || '').toLowerCase();
+          break;
+        case 'machineSerialNumber':
+          aValue = (a.machineSerialNumber || '').toLowerCase();
+          bValue = (b.machineSerialNumber || '').toLowerCase();
+          break;
+        default:
+          aValue = a[sortConfig.key];
+          bValue = b[sortConfig.key];
+      }
+      
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+    
     setFilteredReports(filtered);
-  }, [reports, reportTypeFilter]);
+  }, [reports, reportTypeFilter, dateFilter, locationFilter, machineSerialFilter, sortConfig]);
 
   // useEffect'i sonra kullan
   useEffect(() => {
     if (userData?.role === 'admin') {
       fetchReports();
       fetchUsers();
+      fetchCommodities();
     }
-  }, [fetchReports, fetchUsers, userData]);
+  }, [fetchReports, fetchUsers, fetchCommodities, userData]);
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -218,6 +328,148 @@ const AdminPanel = () => {
       role: 'routeman',
       isActive: true
     });
+  };
+
+  // Commodity management functions
+  const handleCreateCommodity = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      if (!newCommodity['Commodity code'] || !newCommodity['Product name']) {
+        setError('Lütfen ürün kodu ve ürün adı alanlarını doldurun.');
+        return;
+      }
+
+      const result = await commodityService.createCommodity(newCommodity);
+
+      if (result.success) {
+        setNewCommodity({
+          'Commodity code': '',
+          'Product name': '',
+          'Unit price': '',
+          'Cost price': '',
+          'Supplier': '',
+          'Specs': '',
+          'Type': '',
+          'Description': ''
+        });
+        setSuccess('Ürün başarıyla oluşturuldu!');
+        fetchCommodities();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('Ürün oluşturulamadı. Lütfen tekrar deneyin.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditCommodity = (commodity) => {
+    setEditingCommodity(commodity);
+    setCommodityEditFormData({
+      'Commodity code': commodity['Commodity code'] || '',
+      'Product name': commodity['Product name'] || '',
+      'Unit price': commodity['Unit price'] || '',
+      'Cost price': commodity['Cost price'] || '',
+      'Supplier': commodity['Supplier'] || '',
+      'Specs': commodity['Specs'] || '',
+      'Type': commodity['Type'] || '',
+      'Description': commodity['Description'] || ''
+    });
+    setCommodityEditFormOpen(true);
+  };
+
+  const handleSaveCommodityEdit = async () => {
+    try {
+      setLoading(true);
+      const result = await commodityService.updateCommodity(editingCommodity.id, {
+        ...commodityEditFormData,
+        updatedAt: new Date().toISOString()
+      });
+      
+      if (result.success) {
+        fetchCommodities();
+        setSuccess('Ürün başarıyla güncellendi!');
+        setTimeout(() => setSuccess(''), 3000);
+        setCommodityEditFormOpen(false);
+        setEditingCommodity(null);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('Ürün güncellenemedi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseCommodityEditForm = () => {
+    setCommodityEditFormOpen(false);
+    setEditingCommodity(null);
+    setCommodityEditFormData({
+      'Commodity code': '',
+      'Product name': '',
+      'Unit price': '',
+      'Cost price': '',
+      'Supplier': '',
+      'Specs': '',
+      'Type': '',
+      'Description': ''
+    });
+  };
+
+  const handleDeleteCommodity = async (commodityId) => {
+    try {
+      setLoading(true);
+      const result = await commodityService.deleteCommodity(commodityId);
+      
+      if (result.success) {
+        setSuccess('Ürün başarıyla silindi!');
+        fetchCommodities();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('Ürün silinemedi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImportCommodities = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+
+      const text = await file.text();
+      const jsonData = JSON.parse(text);
+      
+      const result = await importCommoditiesFromJSON(jsonData);
+      
+      if (result.success) {
+        setSuccess(`${result.successCount} ürün başarıyla içe aktarıldı! ${result.errorCount} hatalı kayıt.`);
+        fetchCommodities();
+        setTimeout(() => setSuccess(''), 5000);
+      } else {
+        setError(`İçe aktarma hatası: ${result.error}`);
+      }
+    } catch (error) {
+      setError(`Dosya okuma hatası: ${error.message}`);
+    } finally {
+      setLoading(false);
+      // Input'u temizle
+      event.target.value = '';
+    }
   };
 
   const handleDeleteReport = async (reportId) => {
@@ -350,6 +602,23 @@ const AdminPanel = () => {
     }
   };
 
+  const clearAllFilters = () => {
+    setReportTypeFilter('all');
+    setDateFilter({ startDate: '', endDate: '' });
+    setLocationFilter('');
+    setMachineSerialFilter('');
+    setSortConfig({ key: 'createdAt', direction: 'desc' });
+  };
+
+  const handleSort = (key) => {
+    setSortConfig(prev => {
+      if (prev.key === key) {
+        return { ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
   if (userData?.role !== 'admin') {
     return (
       <Container>
@@ -401,28 +670,90 @@ const AdminPanel = () => {
           <Tab label="Raporlar" />
           <Tab label="Kullanıcı Ekle" />
           <Tab label="Kullanıcı Listesi" />
+          <Tab label="Ürün Yönetimi" />
         </Tabs>
 
         {activeTab === 0 && (
           <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Box>
-                <Typography variant="h6" sx={{ display: 'inline-block', mr: 2 }}>
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
                   Tüm Raporlar ({filteredReports.length})
                 </Typography>
-                <FormControl sx={{ minWidth: 120 }}>
-                  <InputLabel>Rapor Türü</InputLabel>
-                  <Select
-                    value={reportTypeFilter}
-                    label="Rapor Türü"
-                    onChange={(e) => setReportTypeFilter(e.target.value)}
-                  >
-                    <MenuItem value="all">Tümü</MenuItem>
-                    <MenuItem value="iceCream">Dondurma Temizlik</MenuItem>
-                    <MenuItem value="fridge">Taze Dolap Dolum</MenuItem>
-                  </Select>
-                </FormControl>
+                <Button
+                  variant="outlined"
+                  onClick={clearAllFilters}
+                  size="small"
+                >
+                  Tüm Filtreleri Temizle
+                </Button>
               </Box>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={2}>
+                  <FormControl fullWidth>
+                    <InputLabel>Rapor Türü</InputLabel>
+                    <Select
+                      value={reportTypeFilter}
+                      label="Rapor Türü"
+                      onChange={(e) => setReportTypeFilter(e.target.value)}
+                    >
+                      <MenuItem value="all">Tümü</MenuItem>
+                      <MenuItem value="iceCream">Dondurma Temizlik</MenuItem>
+                      <MenuItem value="fridge">Taze Dolap Dolum</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6} md={2}>
+                  <TextField
+                    type="date"
+                    label="Başlangıç Tarihi"
+                    value={dateFilter.startDate}
+                    onChange={(e) => setDateFilter({ ...dateFilter, startDate: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={2}>
+                  <TextField
+                    type="date"
+                    label="Bitiş Tarihi"
+                    value={dateFilter.endDate}
+                    onChange={(e) => setDateFilter({ ...dateFilter, endDate: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={2}>
+                  <TextField
+                    label="Lokasyon"
+                    value={locationFilter}
+                    onChange={(e) => setLocationFilter(e.target.value)}
+                    placeholder="Lokasyon ara..."
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={2}>
+                  <TextField
+                    label="Makine Seri No"
+                    value={machineSerialFilter}
+                    onChange={(e) => setMachineSerialFilter(e.target.value)}
+                    placeholder="Seri no ara..."
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={2}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                    <Typography variant="body2" color="textSecondary">
+                      Sıralama: {sortConfig.key === 'createdAt' ? 'Tarih' : sortConfig.key === 'location' ? 'Lokasyon' : 'Makine Seri No'} 
+                      ({sortConfig.direction === 'asc' ? 'Artan' : 'Azalan'})
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
               <Button
                 variant="contained"
                 onClick={handleExportReports}
@@ -433,6 +764,23 @@ const AdminPanel = () => {
               </Button>
             </Box>
 
+            {/* Aktif Filtreler Bilgisi */}
+            {(dateFilter.startDate || dateFilter.endDate || locationFilter || machineSerialFilter || reportTypeFilter !== 'all') && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>Aktif Filtreler:</strong>
+                  {dateFilter.startDate && ` Başlangıç: ${dateFilter.startDate}`}
+                  {dateFilter.endDate && ` Bitiş: ${dateFilter.endDate}`}
+                  {locationFilter && ` Lokasyon: "${locationFilter}"`}
+                  {machineSerialFilter && ` Seri No: "${machineSerialFilter}"`}
+                  {reportTypeFilter !== 'all' && ` Tür: ${reportTypeFilter === 'iceCream' ? 'Dondurma Temizlik' : 'Taze Dolap Dolum'}`}
+                  <br />
+                  <strong>Sıralama:</strong> {sortConfig.key === 'createdAt' ? 'Tarih' : sortConfig.key === 'location' ? 'Lokasyon' : 'Makine Seri No'} 
+                  ({sortConfig.direction === 'asc' ? 'Artan' : 'Azalan'})
+                </Typography>
+              </Alert>
+            )}
+
             {filteredReports.length === 0 ? (
               <Alert severity="info">Henüz rapor bulunmuyor.</Alert>
             ) : (
@@ -441,10 +789,58 @@ const AdminPanel = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>Rapor ID</TableCell>
-                      <TableCell>Lokasyon</TableCell>
-                      <TableCell>Makine Seri No</TableCell>
+                      <TableCell 
+                        onClick={() => handleSort('location')}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                          userSelect: 'none'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          Lokasyon
+                          {sortConfig.key === 'location' && (
+                            <Box component="span" sx={{ ml: 1 }}>
+                              {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell 
+                        onClick={() => handleSort('machineSerialNumber')}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                          userSelect: 'none'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          Makine Seri No
+                          {sortConfig.key === 'machineSerialNumber' && (
+                            <Box component="span" sx={{ ml: 1 }}>
+                              {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
                       <TableCell>Kullanıcı</TableCell>
-                      <TableCell>Tarih</TableCell>
+                      <TableCell 
+                        onClick={() => handleSort('createdAt')}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                          userSelect: 'none'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          Tarih
+                          {sortConfig.key === 'createdAt' && (
+                            <Box component="span" sx={{ ml: 1 }}>
+                              {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
                       <TableCell>Durum</TableCell>
                       <TableCell>Rapor Türü</TableCell>
                       <TableCell>İşlemler</TableCell>
@@ -848,6 +1244,199 @@ const AdminPanel = () => {
                       <TableCell colSpan={7} align="center">
                         <Typography color="textSecondary">
                           Henüz kullanıcı bulunmuyor
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+
+        {activeTab === 3 && (
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Ürün Yönetimi ({commodities.length})
+              </Typography>
+              <Box>
+                <input
+                  accept=".json"
+                  style={{ display: 'none' }}
+                  id="import-commodities"
+                  type="file"
+                  onChange={handleImportCommodities}
+                />
+                <label htmlFor="import-commodities">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    startIcon={<CloudUpload />}
+                    disabled={loading}
+                  >
+                    JSON'dan İçe Aktar
+                  </Button>
+                </label>
+              </Box>
+            </Box>
+
+            {/* Yeni Ürün Ekleme Formu */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Yeni Ürün Ekle
+              </Typography>
+              <Box component="form" onSubmit={handleCreateCommodity}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Ürün Kodu"
+                      value={newCommodity['Commodity code']}
+                      onChange={(e) => setNewCommodity({ ...newCommodity, 'Commodity code': e.target.value })}
+                      required
+                      disabled={loading}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Ürün Adı"
+                      value={newCommodity['Product name']}
+                      onChange={(e) => setNewCommodity({ ...newCommodity, 'Product name': e.target.value })}
+                      required
+                      disabled={loading}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Birim Fiyat"
+                      type="number"
+                      value={newCommodity['Unit price']}
+                      onChange={(e) => setNewCommodity({ ...newCommodity, 'Unit price': e.target.value })}
+                      disabled={loading}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Maliyet Fiyatı"
+                      type="number"
+                      value={newCommodity['Cost price']}
+                      onChange={(e) => setNewCommodity({ ...newCommodity, 'Cost price': e.target.value })}
+                      disabled={loading}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Tedarikçi"
+                      value={newCommodity['Supplier']}
+                      onChange={(e) => setNewCommodity({ ...newCommodity, 'Supplier': e.target.value })}
+                      disabled={loading}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Özellikler"
+                      value={newCommodity['Specs']}
+                      onChange={(e) => setNewCommodity({ ...newCommodity, 'Specs': e.target.value })}
+                      disabled={loading}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Tip"
+                      value={newCommodity['Type']}
+                      onChange={(e) => setNewCommodity({ ...newCommodity, 'Type': e.target.value })}
+                      disabled={loading}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Açıklama"
+                      value={newCommodity['Description']}
+                      onChange={(e) => setNewCommodity({ ...newCommodity, 'Description': e.target.value })}
+                      disabled={loading}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={loading || !newCommodity['Commodity code'] || !newCommodity['Product name']}
+                      startIcon={loading ? <CircularProgress size={20} /> : <Add />}
+                    >
+                      {loading ? 'Ekleniyor...' : 'Ürün Ekle'}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Box>
+            </Paper>
+
+            {/* Ürün Listesi */}
+            {loading && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress />
+              </Box>
+            )}
+
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Ürün Kodu</TableCell>
+                    <TableCell>Ürün Adı</TableCell>
+                    <TableCell>Birim Fiyat</TableCell>
+                    <TableCell>Maliyet Fiyatı</TableCell>
+                    <TableCell>Tedarikçi</TableCell>
+                    <TableCell>Tip</TableCell>
+                    <TableCell>İşlemler</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {commodities.map((commodity) => (
+                    <TableRow key={commodity.id}>
+                      <TableCell>{commodity['Commodity code']}</TableCell>
+                      <TableCell>{commodity['Product name']}</TableCell>
+                      <TableCell>{commodity['Unit price']} ₺</TableCell>
+                      <TableCell>{commodity['Cost price']} ₺</TableCell>
+                      <TableCell>{commodity['Supplier']}</TableCell>
+                      <TableCell>{commodity['Type']}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => handleEditCommodity(commodity)}
+                            disabled={loading}
+                            startIcon={<Edit />}
+                          >
+                            Düzenle
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => handleDeleteCommodity(commodity.id)}
+                            disabled={loading}
+                            startIcon={<Delete />}
+                          >
+                            Sil
+                          </Button>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {commodities.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">
+                        <Typography color="textSecondary">
+                          Henüz ürün bulunmuyor
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -1311,6 +1900,121 @@ const AdminPanel = () => {
             color="primary" 
             variant="contained"
             disabled={loading || !editFormData.name.trim()}
+          >
+            {loading ? 'Güncelleniyor...' : 'Güncelle'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Ürün Düzenleme Dialog */}
+      <Dialog
+        open={commodityEditFormOpen}
+        onClose={handleCloseCommodityEditForm}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Ürün Düzenle: {editingCommodity?.['Product name']}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  label="Ürün Kodu"
+                  value={commodityEditFormData['Commodity code']}
+                  onChange={(e) => setCommodityEditFormData({ ...commodityEditFormData, 'Commodity code': e.target.value })}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  label="Ürün Adı"
+                  value={commodityEditFormData['Product name']}
+                  onChange={(e) => setCommodityEditFormData({ ...commodityEditFormData, 'Product name': e.target.value })}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  label="Birim Fiyat"
+                  type="number"
+                  value={commodityEditFormData['Unit price']}
+                  onChange={(e) => setCommodityEditFormData({ ...commodityEditFormData, 'Unit price': e.target.value })}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  label="Maliyet Fiyatı"
+                  type="number"
+                  value={commodityEditFormData['Cost price']}
+                  onChange={(e) => setCommodityEditFormData({ ...commodityEditFormData, 'Cost price': e.target.value })}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  label="Tedarikçi"
+                  value={commodityEditFormData['Supplier']}
+                  onChange={(e) => setCommodityEditFormData({ ...commodityEditFormData, 'Supplier': e.target.value })}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  label="Özellikler"
+                  value={commodityEditFormData['Specs']}
+                  onChange={(e) => setCommodityEditFormData({ ...commodityEditFormData, 'Specs': e.target.value })}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  label="Tip"
+                  value={commodityEditFormData['Type']}
+                  onChange={(e) => setCommodityEditFormData({ ...commodityEditFormData, 'Type': e.target.value })}
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  label="Açıklama"
+                  value={commodityEditFormData['Description']}
+                  onChange={(e) => setCommodityEditFormData({ ...commodityEditFormData, 'Description': e.target.value })}
+                  disabled={loading}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCommodityEditForm}>
+            İptal
+          </Button>
+          <Button 
+            onClick={handleSaveCommodityEdit} 
+            color="primary" 
+            variant="contained"
+            disabled={loading || !commodityEditFormData['Commodity code'].trim() || !commodityEditFormData['Product name'].trim()}
           >
             {loading ? 'Güncelleniyor...' : 'Güncelle'}
           </Button>

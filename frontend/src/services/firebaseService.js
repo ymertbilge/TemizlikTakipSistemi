@@ -5,8 +5,10 @@ import { database, auth } from '../config/firebase';
 // Firebase Realtime Database referansları - Firebase v9 syntax
 const getReportsRef = () => ref(database, 'temizlikTakip/reports');
 const getUsersRef = () => ref(database, 'temizlikTakip/users');
+const getCommoditiesRef = () => ref(database, 'temizlikTakip/commodityList');
 const getReportRef = (reportId) => ref(database, `temizlikTakip/reports/${reportId}`);
 const getUserRef = (userId) => ref(database, `temizlikTakip/users/${userId}`);
+const getCommodityRef = (commodityId) => ref(database, `temizlikTakip/commodityList/${commodityId}`);
 
 // Auth Servisi
 export const authService = {
@@ -292,6 +294,91 @@ export const userService = {
   }
 };
 
+// Commodity Servisleri
+export const commodityService = {
+  // Tüm ürünleri getir
+  async getAllCommodities() {
+    try {
+      const snapshot = await get(getCommoditiesRef());
+      
+      if (snapshot.exists()) {
+        const commodities = [];
+        snapshot.forEach((childSnapshot) => {
+          commodities.push({
+            id: childSnapshot.key,
+            ...childSnapshot.val()
+          });
+        });
+        return { success: true, commodities };
+      }
+      return { success: true, commodities: [] };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Ürün getir
+  async getCommodityById(commodityId) {
+    try {
+      const snapshot = await get(getCommodityRef(commodityId));
+      if (snapshot.exists()) {
+        return { 
+          success: true, 
+          commodity: { id: snapshot.key, ...snapshot.val() } 
+        };
+      }
+      return { success: false, error: 'Ürün bulunamadı' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Ürün oluştur
+  async createCommodity(commodityData) {
+    try {
+      const newCommodityRef = push(getCommoditiesRef());
+      const commodityId = newCommodityRef.key;
+      
+      const commodity = {
+        id: commodityId,
+        ...commodityData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      await set(newCommodityRef, commodity);
+      
+      return { success: true, commodityId, commodity };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Ürün güncelle
+  async updateCommodity(commodityId, updateData) {
+    try {
+      const commodityRef = getCommodityRef(commodityId);
+      await update(commodityRef, {
+        ...updateData,
+        updatedAt: new Date().toISOString()
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Ürün sil
+  async deleteCommodity(commodityId) {
+    try {
+      await remove(getCommodityRef(commodityId));
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+};
+
 // Fotoğraf Servisi (LocalStorage + Sıkıştırılmış Base64)
 export const photoService = {
   // Fotoğrafı sıkıştırılmış base64 olarak kaydet
@@ -434,6 +521,7 @@ const firebaseService = {
   authService,
   reportService,
   userService,
+  commodityService,
   photoService
 };
 
