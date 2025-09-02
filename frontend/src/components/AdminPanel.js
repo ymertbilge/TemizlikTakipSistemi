@@ -4,7 +4,7 @@ import {
   Button, Box, Chip, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Card, CardContent,
   CardMedia, IconButton, Collapse, List, ListItem, ListItemText, Divider, Alert, TextField,
   FormControl, InputLabel, Select, MenuItem, Switch, FormControlLabel, Tabs, Tab, CircularProgress,
-  TablePagination
+  TablePagination, Checkbox
 } from '@mui/material';
 import { 
   Visibility, ExpandMore, ExpandLess, CheckCircle, Cancel, Delete, Download, Edit, CloudUpload, Add
@@ -72,7 +72,7 @@ const AdminPanel = () => {
     email: '',
     password: '',
     name: '',
-    role: 'routeman'
+    role: 'viewer'
   });
 
   // Kullanıcı düzenleme formu
@@ -80,7 +80,7 @@ const AdminPanel = () => {
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: '',
-    role: 'routeman',
+    role: 'viewer',
     isActive: true
   });
 
@@ -127,11 +127,9 @@ const AdminPanel = () => {
       if (result.success) {
         setCommodities(result.commodities || []);
       } else {
-        console.warn('Ürünler yüklenemedi:', result.error);
         setCommodities([]); // Boş liste olarak ayarla
       }
     } catch (error) {
-      console.warn('Ürünler yüklenirken hata oluştu:', error);
       setCommodities([]); // Boş liste olarak ayarla
     }
   }, []);
@@ -685,6 +683,30 @@ const AdminPanel = () => {
     setReportDialogOpen(true);
   };
 
+  // Arıza çözüm durumunu güncelle
+  const handleIssueResolve = async (reportId, resolved) => {
+    try {
+      setLoading(true);
+      const result = await reportService.updateReport(reportId, {
+        issueResolved: resolved,
+        issueResolvedDate: resolved ? new Date().toISOString() : '',
+        updatedAt: new Date().toISOString()
+      });
+      
+      if (result.success) {
+        fetchReports(); // Raporları yenile
+        setSuccess('Arıza durumu güncellendi!');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError('Arıza durumu güncellenemedi: ' + result.error);
+      }
+    } catch (error) {
+      setError('Arıza durumu güncellenirken hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleRowExpansion = (reportId) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(reportId)) {
@@ -711,6 +733,8 @@ const AdminPanel = () => {
       case 'completed': return 'primary';
       case 'pending': return 'warning';
       case 'cancelled': return 'error';
+      case 'issue': return 'error';
+      case 'waste': return 'warning';
       default: return 'default';
     }
   };
@@ -720,6 +744,8 @@ const AdminPanel = () => {
       case 'completed': return 'Tamamlandı';
       case 'pending': return 'Bekliyor';
       case 'cancelled': return 'İptal Edildi';
+      case 'issue': return 'Arıza';
+      case 'waste': return 'Zayi';
       default: return status;
     }
   };
@@ -1007,7 +1033,16 @@ const AdminPanel = () => {
                     <TableBody>
                       {paginatedReports.map((report) => (
                         <React.Fragment key={report.id}>
-                          <TableRow>
+                          <TableRow
+                            sx={{
+                              backgroundColor: report.hasIssue ? 'error.light' : 
+                                              report.hasWaste ? 'warning.light' : 'inherit',
+                              '&:hover': {
+                                backgroundColor: report.hasIssue ? 'error.main' : 
+                                               report.hasWaste ? 'warning.main' : 'rgba(0,0,0,0.04)'
+                              }
+                            }}
+                          >
                             <TableCell>
                               <Button
                                 onClick={() => toggleRowExpansion(report.id)}
@@ -1077,6 +1112,65 @@ const AdminPanel = () => {
                                           <Typography variant="body2">
                                             <strong>Güncellenme:</strong> {formatDate(report.updatedAt)}
                                           </Typography>
+                                          {report.hasIssue && (
+                                            <>
+                                              <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                                                <strong>⚠️ Arıza Bildirimi:</strong>
+                                              </Typography>
+                                              <Typography variant="body2" color="error">
+                                                <strong>Açıklama:</strong> {report.issueDescription}
+                                              </Typography>
+                                              <Typography variant="body2" color="error">
+                                                <strong>Arıza Tarihi:</strong> {formatDate(report.issueDate)}
+                                              </Typography>
+                                              <Box sx={{ mt: 2 }}>
+                                                <FormControlLabel
+                                                  control={
+                                                    <Checkbox
+                                                      checked={report.issueResolved || false}
+                                                      onChange={(e) => handleIssueResolve(report.id, e.target.checked)}
+                                                      color="success"
+                                                      disabled={loading}
+                                                    />
+                                                  }
+                                                  label="Arıza çözüldü"
+                                                />
+                                              </Box>
+                                              {report.issueResolved && (
+                                                <>
+                                                  <Typography variant="body2" color="success.main">
+                                                    <strong>✅ Çözüldü:</strong> Evet
+                                                  </Typography>
+                                                  <Typography variant="body2" color="success.main">
+                                                    <strong>Çözüm Tarihi:</strong> {formatDate(report.issueResolvedDate)}
+                                                  </Typography>
+                                                </>
+                                              )}
+                                            </>
+                                          )}
+                                          {report.hasWaste && (
+                                            <>
+                                              <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
+                                                <strong>📊 Zayi Bildirimi:</strong>
+                                              </Typography>
+                                              <Typography variant="body2" color="warning.main">
+                                                <strong>Zayi Tarihi:</strong> {formatDate(report.wasteDate)}
+                                              </Typography>
+                                              {report.wasteItems && report.wasteItems.length > 0 && (
+                                                <>
+                                                  <Typography variant="body2" color="warning.main">
+                                                    <strong>Zayi Ürünleri:</strong>
+                                                  </Typography>
+                                                  {report.wasteItems.map((item, index) => (
+                                                    <Typography key={index} variant="body2" color="warning.main" sx={{ ml: 2 }}>
+                                                      • {item.productName} - {item.quantity} {item.unit} (Sebep: {item.reason})
+                                                      {item.productCode && ` • Kod: ${item.productCode}`}
+                                                    </Typography>
+                                                  ))}
+                                                </>
+                                              )}
+                                            </>
+                                          )}
                                         </CardContent>
                                       </Card>
                                     </Grid>
@@ -1186,11 +1280,11 @@ const AdminPanel = () => {
                                               </Grid>
                                             )}
 
-                                            {/* Sorun Fotoğrafları */}
+                                            {/* Arıza Fotoğrafları */}
                                             {report.issuePhotos && report.issuePhotos.length > 0 && (
                                               <Grid item xs={12} md={4}>
                                                 <Typography variant="subtitle2" gutterBottom>
-                                                  Sorun ({report.issuePhotos.length})
+                                                  Arıza ({report.issuePhotos.length})
                                                 </Typography>
                                                 <Grid container spacing={1}>
                                                   {report.issuePhotos.map((photo, index) => (
@@ -1199,7 +1293,7 @@ const AdminPanel = () => {
                                                         component="img"
                                                         height="120"
                                                         image={photo}
-                                                        alt={`Sorun ${index + 1}`}
+                                                        alt={`Arıza ${index + 1}`}
                                                         sx={{ objectFit: 'cover', borderRadius: 1 }}
                                                       />
                                                     </Grid>
@@ -1298,6 +1392,7 @@ const AdminPanel = () => {
                   disabled={loading}
                 >
                   <MenuItem value="routeman">Operasyon Sorumlusu</MenuItem>
+                  <MenuItem value="viewer">İzleyici</MenuItem>
                   <MenuItem value="admin">Admin</MenuItem>
                 </Select>
               </FormControl>
@@ -1356,11 +1451,11 @@ const AdminPanel = () => {
                         <Typography 
                           variant="body2" 
                           sx={{ 
-                            color: user.role === 'admin' ? 'primary.main' : 'text.primary',
+                            color: user.role === 'admin' ? 'primary.main' : user.role === 'routeman' ? 'success.main' : 'warning.main',
                             fontWeight: user.role === 'admin' ? 'bold' : 'normal'
                           }}
                         >
-                          {user.role === 'admin' ? 'Admin' : 'Operasyon Sorumlusu'}
+                          {user.role === 'admin' ? 'Admin' : user.role === 'routeman' ? 'Operasyon Sorumlusu' : 'İzleyici'}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -2110,11 +2205,11 @@ const AdminPanel = () => {
                       </Grid>
                     )}
 
-                    {/* Sorun Fotoğrafları */}
+                    {/* Arıza Fotoğrafları */}
                     {selectedReport.issuePhotos && selectedReport.issuePhotos.length > 0 && (
                       <Grid item xs={12} md={4}>
                         <Typography variant="subtitle2" gutterBottom>
-                          Sorun Fotoğrafları ({selectedReport.issuePhotos.length})
+                          Arıza Fotoğrafları ({selectedReport.issuePhotos.length})
                         </Typography>
                         <Grid container spacing={1}>
                           {selectedReport.issuePhotos.map((photo, index) => (
@@ -2123,7 +2218,7 @@ const AdminPanel = () => {
                                 component="img"
                                 height="200"
                                 image={photo}
-                                alt={`Sorun ${index + 1}`}
+                                alt={`Arıza ${index + 1}`}
                                 sx={{ objectFit: 'cover', borderRadius: 1 }}
                               />
                             </Grid>
@@ -2226,6 +2321,7 @@ const AdminPanel = () => {
                 disabled={loading}
               >
                 <MenuItem value="routeman">Operasyon Sorumlusu</MenuItem>
+                <MenuItem value="viewer">İzleyici</MenuItem>
                 <MenuItem value="admin">Admin</MenuItem>
               </Select>
             </FormControl>

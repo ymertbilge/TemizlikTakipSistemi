@@ -68,7 +68,7 @@ const Header = () => {
             </>
           )}
           
-          {userData.role === 'routeman' && (
+          {(userData.role === 'routeman' || userData.role === 'viewer') && (
             <>
               <Button
                 color="inherit"
@@ -80,6 +80,11 @@ const Header = () => {
               >
                 Ana Sayfa
               </Button>
+            </>
+          )}
+          
+          {userData.role === 'routeman' && (
+            <>
               <Button
                 color="inherit"
                 startIcon={<Assignment />}

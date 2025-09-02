@@ -106,7 +106,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
         <Route path="/dashboard" element={
-          <ProtectedRoute allowedRoles={['routeman']}>
+          <ProtectedRoute allowedRoles={['routeman', 'viewer']}>
             <Dashboard />
           </ProtectedRoute>
         } />

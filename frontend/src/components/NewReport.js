@@ -11,7 +11,11 @@ import {
   CircularProgress,
   IconButton,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { PhotoCamera, Delete, CloudUpload, Add } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -98,8 +102,45 @@ const NewReport = () => {
   const [success, setSuccess] = useState('');
   const [countdown, setCountdown] = useState(0);
   
+  // Arıza sistemi state'leri
+  const [hasIssue, setHasIssue] = useState(false);
+  const [issueDescription, setIssueDescription] = useState('');
+  
+  // Zayi sistemi state'leri
+  const [hasWaste, setHasWaste] = useState(false);
+  const [wasteItems, setWasteItems] = useState([]);
+  const [wasteReason, setWasteReason] = useState('');
+  
   // Component unmount kontrolü için ref
   const isMounted = useRef(true);
+  
+  // Zayi ürün ekleme fonksiyonları
+  const addWasteItem = () => {
+    if (!wasteReason.trim()) {
+      setError('Zayi sebebi belirtilmelidir!');
+      return;
+    }
+    const newWasteItem = {
+      id: Date.now(),
+      productName: '',
+      quantity: '',
+      unit: 'litre', // Dondurma için varsayılan
+      reason: wasteReason.trim()
+    };
+    setWasteItems(prev => [...prev, newWasteItem]);
+    setWasteReason('');
+    setError('');
+  };
+
+  const removeWasteItem = (itemId) => {
+    setWasteItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  const updateWasteItem = (itemId, field, value) => {
+    setWasteItems(prev => prev.map(item => 
+      item.id === itemId ? { ...item, [field]: value } : item
+    ));
+  };
   
   // Form state
   const [formData, setFormData] = useState({
@@ -392,6 +433,28 @@ const NewReport = () => {
       return;
     }
 
+    // Arıza açıklaması kontrolü
+    if (hasIssue && !issueDescription.trim()) {
+      safeSetState(setError, 'Arıza seçildi ama açıklama yazılmadı!');
+      return;
+    }
+
+    // Zayi kontrolü
+    if (hasWaste && wasteItems.length === 0) {
+      safeSetState(setError, 'Zayi seçildi ama hiç ürün eklenmedi!');
+      return;
+    }
+
+    // Zayi ürünlerinde boş alan kontrolü
+    if (hasWaste) {
+      for (const item of wasteItems) {
+        if (!item.productName.trim() || !item.quantity.trim()) {
+          safeSetState(setError, 'Zayi ürünlerinde ürün adı ve miktar alanları doldurulmalıdır!');
+          return;
+        }
+      }
+    }
+
     safeSetState(setLoading, true);
     safeSetState(setError, '');
     safeSetState(setSuccess, '');
@@ -420,6 +483,16 @@ const NewReport = () => {
         cupStock: formData.cupStock.trim(),
         waste: formData.waste.trim(),
         stockInfo: formData.stockInfo.trim(),
+        // Arıza bilgileri
+        hasIssue: hasIssue,
+        issueDescription: hasIssue ? issueDescription.trim() : '',
+        issueResolved: false, // Formdan kaldırıldığı için her zaman false
+        issueResolvedDate: '', // Formdan kaldırıldığı için boş
+        issueDate: hasIssue ? new Date().toISOString() : '',
+        // Zayi bilgileri
+        hasWaste: hasWaste,
+        wasteItems: hasWaste ? wasteItems : [],
+        wasteDate: hasWaste ? new Date().toISOString() : '',
         equipmentChecklist: equipmentChecklist.map(item => ({
           id: item.id, 
           text: item.text, 
@@ -436,7 +509,7 @@ const NewReport = () => {
         beforePhotos: photoUploads.filter(p => p.type === 'before').map(p => p.url),
         afterPhotos: photoUploads.filter(p => p.type === 'after').map(p => p.url),
         issuePhotos: photoUploads.filter(p => p.type === 'issue').map(p => p.url),
-        status: 'completed',
+        status: hasIssue ? 'issue' : hasWaste ? 'waste' : 'completed',
         title: generateReportTitle(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -537,6 +610,160 @@ const NewReport = () => {
                   onChange={(e) => handleInputChange('notes', e.target.value)}
                   placeholder="Ek notlar, özel durumlar..."
                 />
+        </Grid>
+        
+        {/* Arıza Sistemi */}
+        <Grid item xs={12}>
+          <Paper variant="outlined" sx={{ p: 2, borderColor: hasIssue ? 'error.main' : 'divider' }}>
+            <Typography variant="h6" gutterBottom color={hasIssue ? 'error' : 'primary'}>
+              ⚠️ Arıza Bildirimi
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={hasIssue}
+                      onChange={(e) => setHasIssue(e.target.checked)}
+                      color="error"
+                    />
+                  }
+                  label="Arıza var"
+                />
+              </Grid>
+              {hasIssue && (
+                <>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="Arıza Açıklaması"
+                      value={issueDescription}
+                      onChange={(e) => setIssueDescription(e.target.value)}
+                      placeholder="Arızanın detaylı açıklamasını yazın..."
+                      required
+                    />
+                  </Grid>
+
+                </>
+              )}
+            </Grid>
+          </Paper>
+        </Grid>
+        
+        {/* Zayi Sistemi */}
+        <Grid item xs={12}>
+          <Paper variant="outlined" sx={{ p: 2, borderColor: hasWaste ? 'warning.main' : 'divider' }}>
+            <Typography variant="h6" gutterBottom color={hasWaste ? 'warning' : 'primary'}>
+              📊 Zayi Bildirimi
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={hasWaste}
+                      onChange={(e) => setHasWaste(e.target.checked)}
+                      color="warning"
+                    />
+                  }
+                  label="Zayi var"
+                />
+              </Grid>
+              {hasWaste && (
+                <>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Zayi Ürünleri Ekle
+                    </Typography>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Zayi Sebebi"
+                          value={wasteReason}
+                          onChange={(e) => setWasteReason(e.target.value)}
+                          placeholder="Örn: Son kullanma tarihi geçmiş, hasarlı paket..."
+                          helperText="Bu sebep tüm zayi ürünleri için geçerli olacak"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Button
+                          variant="contained"
+                          onClick={addWasteItem}
+                          disabled={!wasteReason.trim()}
+                          startIcon={<Add />}
+                        >
+                          Zayi Ürün Ekle
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                  
+                  {wasteItems.length > 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Zayi Ürün Listesi ({wasteItems.length})
+                      </Typography>
+                      {wasteItems.map((item, index) => (
+                        <Paper key={item.id} variant="outlined" sx={{ p: 2, mb: 2 }}>
+                          <Grid container spacing={2} alignItems="center">
+                            <Grid item xs={12} sm={4}>
+                              <TextField
+                                fullWidth
+                                label="Ürün Adı"
+                                value={item.productName}
+                                onChange={(e) => updateWasteItem(item.id, 'productName', e.target.value)}
+                                placeholder="Örn: Çikolatalı Dondurma"
+                              />
+                            </Grid>
+                            <Grid item xs={12} sm={3}>
+                              <TextField
+                                fullWidth
+                                label="Miktar"
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => updateWasteItem(item.id, 'quantity', e.target.value)}
+                                placeholder="0"
+                              />
+                            </Grid>
+                            <Grid item xs={12} sm={3}>
+                              <FormControl fullWidth>
+                                <InputLabel>Birim</InputLabel>
+                                <Select
+                                  value={item.unit}
+                                  label="Birim"
+                                  onChange={(e) => updateWasteItem(item.id, 'unit', e.target.value)}
+                                >
+                                  <MenuItem value="litre">Litre</MenuItem>
+                                  <MenuItem value="gram">Gram</MenuItem>
+                                  <MenuItem value="adet">Adet</MenuItem>
+                                  <MenuItem value="kg">KG</MenuItem>
+                                </Select>
+                              </FormControl>
+                            </Grid>
+                            <Grid item xs={12} sm={2}>
+                              <IconButton
+                                color="error"
+                                onClick={() => removeWasteItem(item.id)}
+                                title="Sil"
+                              >
+                                <Delete />
+                              </IconButton>
+                            </Grid>
+                          </Grid>
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                            <strong>Sebep:</strong> {item.reason}
+                          </Typography>
+                        </Paper>
+                      ))}
+                    </Grid>
+                  )}
+                </>
+              )}
+            </Grid>
+          </Paper>
         </Grid>
             {/* Yeni alanlar */}
             <Grid item xs={12} md={4}>
@@ -876,7 +1103,7 @@ const NewReport = () => {
               {/* Issue Photos */}
               <Grid item xs={12} md={4}>
                 <Typography variant="subtitle1" gutterBottom>
-                  Sorun Fotoğrafları <span style={{ color: 'gray', fontSize: '0.8em' }}>(Opsiyonel)</span>
+                  Arıza Fotoğrafları <span style={{ color: 'gray', fontSize: '0.8em' }}>(Opsiyonel)</span>
                 </Typography>
                 <input
                   accept="image/*"

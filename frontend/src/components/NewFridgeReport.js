@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Container,
   Typography,
@@ -104,8 +104,46 @@ const NewFridgeReport = () => {
   const [success, setSuccess] = useState('');
   const [countdown, setCountdown] = useState(0);
   
+  // Arıza sistemi state'leri
+  const [hasIssue, setHasIssue] = useState(false);
+  const [issueDescription, setIssueDescription] = useState('');
+  
+  // Zayi sistemi state'leri
+  const [hasWaste, setHasWaste] = useState(false);
+  const [wasteItems, setWasteItems] = useState([]);
+  const [wasteReason, setWasteReason] = useState('');
+  
   // Component unmount kontrolü için ref
   const isMounted = useRef(true);
+  
+  // Zayi ürün ekleme fonksiyonları
+  const addWasteItem = () => {
+    if (!wasteReason.trim()) {
+      setError('Zayi sebebi belirtilmelidir!');
+      return;
+    }
+    const newWasteItem = {
+      id: Date.now(),
+      productName: '',
+      productCode: '',
+      quantity: '',
+      unit: 'adet', // Taze dolap için varsayılan
+      reason: wasteReason.trim()
+    };
+    setWasteItems(prev => [...prev, newWasteItem]);
+    setWasteReason('');
+    setError('');
+  };
+
+  const removeWasteItem = (itemId) => {
+    setWasteItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  const updateWasteItem = (itemId, field, value) => {
+    setWasteItems(prev => prev.map(item => 
+      item.id === itemId ? { ...item, [field]: value } : item
+    ));
+  };
   
   // Form state
   const [formData, setFormData] = useState({
@@ -248,21 +286,15 @@ const NewFridgeReport = () => {
           }
           
           if (isMounted) {
-            console.log('Yüklenen ürün sayısı:', commodities.length);
-            console.log('Benzersiz ürün sayısı:', uniqueCommodities.length);
-            console.log('Tekrarlanan ürünler:', commodities.length - uniqueCommodities.length);
-            
             setCommodityList(uniqueCommodities.map(item => item.displayText));
           }
         } else {
           if (isMounted) {
-            console.warn('Firebase\'den ürün listesi alınamadı');
             setCommodityList([]);
           }
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Ürün listesi yüklenemedi:', error);
           setCommodityList([]);
         }
       }
@@ -424,21 +456,15 @@ const NewFridgeReport = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    console.log('Form submit başladı');
-    console.log('User data:', userData);
-    console.log('Form data:', formData);
-    console.log('Before photos:', beforePhotos.length);
-    console.log('After photos:', afterPhotos.length);
+
 
     // userData kontrolü
     if (!userData || !userData.uid) {
-      console.error('User data eksik:', userData);
       safeSetState(setError, 'Kullanıcı bilgileri yüklenemedi. Lütfen tekrar giriş yapın.');
       return;
     }
 
     if (!formData.location.trim() || !formData.machineSerialNumber.trim()) {
-      console.error('Form alanları eksik:', formData);
       safeSetState(setError, 'Lütfen lokasyon ve makine seri numarası alanlarını doldurun');
       return;
     }
@@ -446,25 +472,44 @@ const NewFridgeReport = () => {
     // Makine seri numarası formatını kontrol et (10 haneli sayı)
     const serialNumberRegex = /^\d{10}$/;
     if (!serialNumberRegex.test(formData.machineSerialNumber.trim())) {
-      console.error('Seri numara formatı hatalı:', formData.machineSerialNumber);
       safeSetState(setError, 'Makine seri numarası 10 haneli sayı olmalıdır (Örn: 2403290003)');
       return;
     }
 
     // Fotoğraf zorunluluğu kontrolü
     if (beforePhotos.length === 0) {
-      console.error('Öncesi fotoğraf eksik');
       safeSetState(setError, 'En az bir "Öncesi" fotoğraf eklemek zorunludur!');
       return;
     }
 
     if (afterPhotos.length === 0) {
-      console.error('Sonrası fotoğraf eksik');
       safeSetState(setError, 'En az bir "Sonrası" fotoğraf eklemek zorunludur!');
       return;
     }
 
-    console.log('Validation geçti, rapor oluşturma başlıyor...');
+    // Arıza açıklaması kontrolü
+    if (hasIssue && !issueDescription.trim()) {
+      safeSetState(setError, 'Arıza seçildi ama açıklama yazılmadı!');
+      return;
+    }
+
+    // Zayi kontrolü
+    if (hasWaste && wasteItems.length === 0) {
+      safeSetState(setError, 'Zayi seçildi ama hiç ürün eklenmedi!');
+      return;
+    }
+
+    // Zayi ürünlerinde boş alan kontrolü
+    if (hasWaste) {
+      for (const item of wasteItems) {
+        if (!item.productName.trim() || !item.quantity.trim()) {
+          safeSetState(setError, 'Zayi ürünlerinde ürün adı ve miktar alanları doldurulmalıdır!');
+          return;
+        }
+      }
+    }
+
+
     safeSetState(setLoading, true);
     safeSetState(setError, '');
     safeSetState(setSuccess, '');
@@ -489,6 +534,16 @@ const NewFridgeReport = () => {
         location: cleanLocation(formData.location),
         machineSerialNumber: formData.machineSerialNumber.trim(),
         notes: formData.notes.trim(),
+        // Arıza bilgileri
+        hasIssue: hasIssue,
+        issueDescription: hasIssue ? issueDescription.trim() : '',
+        issueResolved: false, // Formdan kaldırıldığı için her zaman false
+        issueResolvedDate: '', // Formdan kaldırıldığı için boş
+        issueDate: hasIssue ? new Date().toISOString() : '',
+        // Zayi bilgileri
+        hasWaste: hasWaste,
+        wasteItems: hasWaste ? wasteItems : [],
+        wasteDate: hasWaste ? new Date().toISOString() : '',
         equipmentChecklist: equipmentChecklist.map(item => ({
           id: item.id, 
           text: item.text, 
@@ -502,7 +557,7 @@ const NewFridgeReport = () => {
         beforePhotos: photoUploads.filter(p => p.type === 'before').map(p => p.url),
         afterPhotos: photoUploads.filter(p => p.type === 'after').map(p => p.url),
         issuePhotos: photoUploads.filter(p => p.type === 'issue').map(p => p.url),
-        status: 'completed',
+        status: hasIssue ? 'issue' : hasWaste ? 'waste' : 'completed',
         title: generateReportTitle(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -511,12 +566,9 @@ const NewFridgeReport = () => {
         reportType: 'fridge'
       };
 
-      console.log('Rapor verisi:', reportData); // Debug için
       const result = await reportService.createReport(reportData);
-      console.log('Rapor oluşturma sonucu:', result); // Debug için
 
       if (result.success) {
-        console.log('Rapor başarıyla oluşturuldu:', result);
         safeSetState(setSuccess, "Rapor başarıyla oluşturuldu! Dashboard'a yönlendiriliyorsunuz...");
         
         // Countdown başlat
@@ -539,16 +591,12 @@ const NewFridgeReport = () => {
           }
         }, 1000);
       } else {
-        console.error('Rapor oluşturma başarısız:', result);
         throw new Error(result.error || 'Rapor oluşturulamadı');
       }
 
     } catch (error) {
-      console.error('Rapor oluşturma hatası:', error);
-      console.error('Error stack:', error.stack);
       safeSetState(setError, `Rapor gönderilemedi: ${error.message}`);
     } finally {
-      console.log('Form submit işlemi tamamlandı');
       safeSetState(setLoading, false);
     }
   };
@@ -611,6 +659,177 @@ const NewFridgeReport = () => {
                   onChange={(e) => handleInputChange('notes', e.target.value)}
                   placeholder="Ek notlar, özel durumlar..."
                 />
+        </Grid>
+        
+        {/* Arıza Sistemi */}
+        <Grid item xs={12}>
+          <Paper variant="outlined" sx={{ p: 2, borderColor: hasIssue ? 'error.main' : 'divider' }}>
+            <Typography variant="h6" gutterBottom color={hasIssue ? 'error' : 'primary'}>
+              ⚠️ Arıza Bildirimi
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={hasIssue}
+                      onChange={(e) => setHasIssue(e.target.checked)}
+                      color="error"
+                    />
+                  }
+                  label="Arıza var"
+                />
+              </Grid>
+              {hasIssue && (
+                <>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="Arıza Açıklaması"
+                      value={issueDescription}
+                      onChange={(e) => setIssueDescription(e.target.value)}
+                      placeholder="Arızanın detaylı açıklamasını yazın..."
+                      required
+                    />
+                  </Grid>
+
+                </>
+              )}
+            </Grid>
+          </Paper>
+        </Grid>
+        
+        {/* Zayi Sistemi */}
+        <Grid item xs={12}>
+          <Paper variant="outlined" sx={{ p: 2, borderColor: hasWaste ? 'warning.main' : 'divider' }}>
+            <Typography variant="h6" gutterBottom color={hasWaste ? 'warning' : 'primary'}>
+              📊 Zayi Bildirimi
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={hasWaste}
+                      onChange={(e) => setHasWaste(e.target.checked)}
+                      color="warning"
+                    />
+                  }
+                  label="Zayi var"
+                />
+              </Grid>
+              {hasWaste && (
+                <>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Zayi Ürünleri Ekle
+                    </Typography>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Zayi Sebebi"
+                          value={wasteReason}
+                          onChange={(e) => setWasteReason(e.target.value)}
+                          placeholder="Örn: Son kullanma tarihi geçmiş, hasarlı paket..."
+                          helperText="Bu sebep tüm zayi ürünleri için geçerli olacak"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Button
+                          variant="contained"
+                          onClick={addWasteItem}
+                          disabled={!wasteReason.trim()}
+                          startIcon={<Add />}
+                        >
+                          Zayi Ürün Ekle
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                  
+                  {wasteItems.length > 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Zayi Ürün Listesi ({wasteItems.length})
+                      </Typography>
+                      {wasteItems.map((item, index) => (
+                        <Paper key={item.id} variant="outlined" sx={{ p: 2, mb: 2 }}>
+                          <Grid container spacing={2} alignItems="center">
+                            <Grid item xs={12} sm={4}>
+                              <FormControl fullWidth>
+                                <InputLabel>Ürün Seç</InputLabel>
+                                <Select
+                                  value={item.productName}
+                                  label="Ürün Seç"
+                                  onChange={(e) => {
+                                    const selectedProduct = e.target.value;
+                                    const productCode = commodityList.find(commodity => 
+                                      commodity.includes(selectedProduct)
+                                    )?.match(/\(([^)]+)\)/)?.[1] || '';
+                                    updateWasteItem(item.id, 'productName', selectedProduct);
+                                    updateWasteItem(item.id, 'productCode', productCode);
+                                  }}
+                                >
+                                  {memoizedCommodityList.map((commodity, index) => (
+                                    <MenuItem key={index} value={commodity.split(' (')[0]}>
+                                      {commodity}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            </Grid>
+                            <Grid item xs={12} sm={3}>
+                              <TextField
+                                fullWidth
+                                label="Miktar"
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => updateWasteItem(item.id, 'quantity', e.target.value)}
+                                placeholder="0"
+                              />
+                            </Grid>
+                            <Grid item xs={12} sm={3}>
+                              <FormControl fullWidth>
+                                <InputLabel>Birim</InputLabel>
+                                <Select
+                                  value={item.unit}
+                                  label="Birim"
+                                  onChange={(e) => updateWasteItem(item.id, 'unit', e.target.value)}
+                                >
+                                  <MenuItem value="adet">Adet</MenuItem>
+                                  <MenuItem value="gram">Gram</MenuItem>
+                                  <MenuItem value="kg">KG</MenuItem>
+                                  <MenuItem value="litre">Litre</MenuItem>
+                                </Select>
+                              </FormControl>
+                            </Grid>
+                            <Grid item xs={12} sm={2}>
+                              <IconButton
+                                color="error"
+                                onClick={() => removeWasteItem(item.id)}
+                                title="Sil"
+                              >
+                                <Delete />
+                              </IconButton>
+                            </Grid>
+                          </Grid>
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                            <strong>Sebep:</strong> {item.reason}
+                            {item.productCode && (
+                              <span> • <strong>Kod:</strong> {item.productCode}</span>
+                            )}
+                          </Typography>
+                        </Paper>
+                      ))}
+                    </Grid>
+                  )}
+                </>
+              )}
+            </Grid>
+          </Paper>
         </Grid>
             </Grid>
 
@@ -864,7 +1083,7 @@ const NewFridgeReport = () => {
               {/* Issue Photos */}
               <Grid item xs={12} md={4}>
                 <Typography variant="subtitle1" gutterBottom>
-                  Sorun Fotoğrafları <span style={{ color: 'gray', fontSize: '0.8em' }}>(Opsiyonel)</span>
+                  Arıza Fotoğrafları <span style={{ color: 'gray', fontSize: '0.8em' }}>(Opsiyonel)</span>
                 </Typography>
                 <input
                   accept="image/*"
