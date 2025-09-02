@@ -11,7 +11,11 @@ import {
   CircularProgress,
   IconButton,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl
 } from '@mui/material';
 import { PhotoCamera, Delete, CloudUpload, Add } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -90,7 +94,37 @@ const cleanLocation = (location) => {
     .trim();
 };
 
-const NewReport = () => {
+// Ürün listesi - bu liste backend'den de sağlanabilir
+const commodityList = [
+  "Çikolata",
+  "Bisküvi",
+  "Gazlı İçecek",
+  "Meyve Suyu",
+  "Su",
+  "Kola",
+  "Fıstık",
+  "Cips",
+  "Kraker",
+  "Sakız",
+  "Makarna",
+  "Kahve",
+  "Çay",
+  "Enerji İçeceği",
+  "Soda",
+  "Limonata",
+  "Ayran",
+  "Yoğurt İçecek",
+  "Smoothie",
+  "Kuruyemiş",
+  "Kek",
+  "Pasta",
+  "Sandviç",
+  "Poğaça",
+  "Börek",
+  "Makine Dolum Ürünü"
+];
+
+const NewFridgeReport = () => {
   const navigate = useNavigate();
   const { userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -105,14 +139,10 @@ const NewReport = () => {
   const [formData, setFormData] = useState({
     location: '',
     machineSerialNumber: '',
-    notes: '',
-    // Yeni alanlar
-    cupStock: '',
-    waste: '',
-    stockInfo: ''
+    notes: ''
   });
 
-  // Checklist states
+  // Checklist states - taze dolap için basitleştirilmiş kontrol listesi
   const [equipmentChecklist, setEquipmentChecklist] = useState([
     { id: 1, text: 'Makine çalışma kontrolü', completed: false, completedAt: null },
     { id: 2, text: 'Soğutma sistemi kontrolü', completed: false, completedAt: null },
@@ -122,26 +152,16 @@ const NewReport = () => {
     { id: 6, text: 'Ekran ve buton kontrolü', completed: false, completedAt: null }
   ]);
 
-  // Temizlik checklist'inden "Filtre temizliği"ni kaldır
-  const [cleaningChecklist, setCleaningChecklist] = useState([
-    { id: 1, text: 'Hazne temizliği', completed: false, completedAt: null },
-    { id: 2, text: 'Sos ve süsleme kapları temizliği', completed: false, completedAt: null },
-    { id: 3, text: 'İç mekan temizliği', completed: false, completedAt: null },
-    { id: 4, text: 'Dış cephe temizliği', completed: false, completedAt: null },
-    { id: 5, text: 'Nozul temizliği', completed: false, completedAt: null }
-    // { id: 6, text: 'Filtre temizliği', completed: false, completedAt: null } - Kaldırıldı
-  ]);
-
-  // Dolum detayları state
-  const [fillingDetails, setFillingDetails] = useState({
-    iceCreamBase: {
-      amount: '',
-      unit: '',
-      unitType: ''
-    },
-    toppings: [],
-    sauces: []
-  });
+  // 58 slotluk otomat içeriği
+  const [slots, setSlots] = useState(
+    Array.from({ length: 58 }, (_, i) => ({
+      id: i + 1,
+      commodity: '',
+      quantity: '',
+      expiryDate: '',
+      batchNumber: ''
+    }))
+  );
 
   // Fotoğraf state'leri
   const [beforePhotos, setBeforePhotos] = useState([]);
@@ -207,10 +227,8 @@ const NewReport = () => {
   };
 
   // Checklist item'larını toggle et
-  const toggleChecklistItem = (checklistType, itemId) => {
-    const setChecklist = checklistType === 'equipment' ? setEquipmentChecklist : setCleaningChecklist;
-    
-    setChecklist(prev => prev.map(item => 
+  const toggleChecklistItem = (itemId) => {
+    setEquipmentChecklist(prev => prev.map(item => 
       item.id === itemId 
         ? { 
           ...item, 
@@ -221,67 +239,11 @@ const NewReport = () => {
     ));
   };
 
-  // Dolum detaylarını güncelle
-  const handleFillingChange = (category, field, value) => {
-    setFillingDetails(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-      [field]: value
-      }
-    }));
-  };
-
-  // Sos ekleme
-  const addSauce = () => {
-    setFillingDetails(prev => ({
-      ...prev,
-      sauces: [...(prev.sauces || []), { id: Date.now(), name: '', brand: '', amount: '', unit: '' }]
-    }));
-  };
-
-  // Sos silme
-  const removeSauce = (id) => {
-    setFillingDetails(prev => ({
-      ...prev,
-      sauces: prev.sauces.filter(sauce => sauce.id !== id)
-    }));
-  };
-
-  // Sos güncelleme
-  const updateSauce = (id, field, value) => {
-    setFillingDetails(prev => ({
-      ...prev,
-      sauces: prev.sauces.map(sauce => 
-        sauce.id === id ? { ...sauce, [field]: value } : sauce
-      )
-    }));
-  };
-
-  // Süsleme ekleme
-  const addTopping = () => {
-    setFillingDetails(prev => ({
-      ...prev,
-      toppings: [...(prev.toppings || []), { id: Date.now(), name: '', brand: '', amount: '', unit: '' }]
-    }));
-  };
-
-  // Süsleme silme
-  const removeTopping = (id) => {
-    setFillingDetails(prev => ({
-      ...prev,
-      toppings: prev.toppings.filter(topping => topping.id !== id)
-    }));
-  };
-
-  // Süsleme güncelleme
-  const updateTopping = (id, field, value) => {
-    setFillingDetails(prev => ({
-      ...prev,
-      toppings: prev.toppings.map(topping => 
-        topping.id === id ? { ...topping, [field]: value } : topping
-      )
-    }));
+  // Slot verilerini güncelle
+  const updateSlot = (slotId, field, value) => {
+    setSlots(prev => prev.map(slot => 
+      slot.id === slotId ? { ...slot, [field]: value } : slot
+    ));
   };
 
   // Fotoğraf ekle
@@ -416,23 +378,13 @@ const NewReport = () => {
         location: cleanLocation(formData.location),
         machineSerialNumber: formData.machineSerialNumber.trim(),
         notes: formData.notes.trim(),
-        // Yeni alanlar
-        cupStock: formData.cupStock.trim(),
-        waste: formData.waste.trim(),
-        stockInfo: formData.stockInfo.trim(),
         equipmentChecklist: equipmentChecklist.map(item => ({
           id: item.id, 
           text: item.text, 
           completed: item.completed, 
           completedAt: item.completedAt
         })),
-        cleaningChecklist: cleaningChecklist.map(item => ({
-          id: item.id, 
-          text: item.text, 
-          completed: item.completed, 
-          completedAt: item.completedAt
-        })),
-        fillingDetails,
+        slots: slots.filter(slot => slot.commodity || slot.quantity || slot.expiryDate || slot.batchNumber),
         beforePhotos: photoUploads.filter(p => p.type === 'before').map(p => p.url),
         afterPhotos: photoUploads.filter(p => p.type === 'after').map(p => p.url),
         issuePhotos: photoUploads.filter(p => p.type === 'issue').map(p => p.url),
@@ -441,13 +393,14 @@ const NewReport = () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         userId: userData.uid, // Kullanıcı ID'sini otomatik ekle
-        userName: userData.name // Kullanıcı adını da ekle
+        userName: userData.name, // Kullanıcı adını da ekle
+        reportType: 'fridge' // Rapor türünü belirt
       };
 
       const result = await reportService.createReport(reportData);
 
       if (result.success) {
-        safeSetState(setSuccess, 'Rapor başarıyla oluşturuldu! Dashboard\'a yönlendiriliyorsunuz...');
+        safeSetState(setSuccess, "Rapor başarıyla oluşturuldu! Dashboard'a yönlendiriliyorsunuz...");
         
         // Countdown başlat
         let count = 3;
@@ -484,7 +437,7 @@ const NewReport = () => {
     <ErrorBoundary>
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 4 }}>
-          Yeni Temizlik Raporu
+          Yeni Taze Dolap Dolum Raporu
       </Typography>
 
       {error && (
@@ -538,36 +491,6 @@ const NewReport = () => {
                   placeholder="Ek notlar, özel durumlar..."
                 />
         </Grid>
-            {/* Yeni alanlar */}
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Bardak Stok"
-                value={formData.cupStock}
-                onChange={(e) => handleInputChange('cupStock', e.target.value)}
-                placeholder="Bardak sayısı"
-                type="number"
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Zayi"
-                value={formData.waste}
-                onChange={(e) => handleInputChange('waste', e.target.value)}
-                placeholder="Zayi miktarı"
-                type="number"
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Yedek/Stok Bilgisi"
-                value={formData.stockInfo}
-                onChange={(e) => handleInputChange('stockInfo', e.target.value)}
-                placeholder="Yedek/stok bilgisi"
-              />
-            </Grid>
             </Grid>
 
             {/* Ekipman Kontrol Listesi */}
@@ -582,7 +505,7 @@ const NewReport = () => {
                     control={
                       <Checkbox
                         checked={item.completed}
-                        onChange={() => toggleChecklistItem('equipment', item.id)}
+                        onChange={() => toggleChecklistItem(item.id)}
                         color="primary"
                       />
                     }
@@ -592,187 +515,63 @@ const NewReport = () => {
               ))}
             </Grid>
 
-            {/* Temizlik Kontrol Listesi */}
+            {/* 58 Slotluk Otomat İçeriği */}
             <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
-              Temizlik Kontrol Listesi
+              Otomat İçeriği (58 Slot)
             </Typography>
             
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              {cleaningChecklist.map((item) => (
-                <Grid item xs={12} md={6} key={item.id}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={item.completed}
-                        onChange={() => toggleChecklistItem('cleaning', item.id)}
-                        color="primary"
-                      />
-                    }
-                    label={item.text}
-                  />
+              {slots.map((slot) => (
+                <Grid item xs={12} sm={6} md={4} key={slot.id}>
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Slot {slot.id}
+                    </Typography>
+                    <FormControl fullWidth sx={{ mb: 1 }}>
+                      <InputLabel>Ürün</InputLabel>
+                      <Select
+                        value={slot.commodity}
+                        label="Ürün"
+                        onChange={(e) => updateSlot(slot.id, 'commodity', e.target.value)}
+                      >
+                        {commodityList.map((commodity) => (
+                          <MenuItem key={commodity} value={commodity}>
+                            {commodity}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Miktar"
+                      type="number"
+                      value={slot.quantity}
+                      onChange={(e) => updateSlot(slot.id, 'quantity', e.target.value)}
+                      sx={{ mb: 1 }}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Son Kullanma Tarihi"
+                      type="date"
+                      value={slot.expiryDate}
+                      onChange={(e) => updateSlot(slot.id, 'expiryDate', e.target.value)}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                      sx={{ mb: 1 }}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Parti Numarası"
+                      value={slot.batchNumber}
+                      onChange={(e) => updateSlot(slot.id, 'batchNumber', e.target.value)}
+                    />
+                  </Paper>
                 </Grid>
               ))}
-            </Grid>
-
-      {/* Dolum Detayları */}
-            <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
-          Dolum Detayları
-        </Typography>
-        
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Dondurma Bazı */}
-               <Grid item xs={12} md={6}>
-                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-          Dondurma Bazı
-        </Typography>
-        <Grid container spacing={2}>
-                   <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-                       label="Miktar"
-                       value={fillingDetails.iceCreamBase.amount}
-                       onChange={(e) => handleFillingChange('iceCreamBase', 'amount', e.target.value)}
-                       placeholder="Örn: 50"
-            />
-          </Grid>
-                   <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-                       label="Birim Tipi"
-                       value={fillingDetails.iceCreamBase.unitType}
-                       onChange={(e) => handleFillingChange('iceCreamBase', 'unitType', e.target.value)}
-                       placeholder="Miktar veya %"
-            />
-          </Grid>
-                   <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-                       label="Birim"
-                       value={fillingDetails.iceCreamBase.unit}
-                       onChange={(e) => handleFillingChange('iceCreamBase', 'unit', e.target.value)}
-                       placeholder="kg, lt, %"
-                     />
-                   </Grid>
-          </Grid>
-        </Grid>
-
-               {/* Süsleme */}
-               <Grid item xs={12} md={6}>
-                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                   Süsleme
-        </Typography>
-                 {fillingDetails.toppings && fillingDetails.toppings.map((topping) => (
-                   <Box key={topping.id} sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
-              <TextField
-                       size="small"
-                       label="Süsleme Adı"
-                       value={topping.name}
-                       onChange={(e) => updateTopping(topping.id, 'name', e.target.value)}
-                       placeholder="Örn: Çikolata"
-                       sx={{ flex: 1 }}
-                     />
-              <TextField
-                       size="small"
-                       label="Marka"
-                       value={topping.brand}
-                       onChange={(e) => updateTopping(topping.id, 'brand', e.target.value)}
-                       placeholder="Örn: Ferrero"
-                       sx={{ width: 150 }}
-                     />
-                     <TextField
-                       size="small"
-                label="Miktar"
-                       value={topping.amount}
-                       onChange={(e) => updateTopping(topping.id, 'amount', e.target.value)}
-                       placeholder="Örn: 50"
-                       sx={{ width: 120 }}
-                     />
-                     <TextField
-                       size="small"
-                       label="Birim"
-                       value={topping.unit}
-                       onChange={(e) => updateTopping(topping.id, 'unit', e.target.value)}
-                       placeholder="gr, kg"
-                       sx={{ width: 100 }}
-                     />
-                     <IconButton
-                       size="small"
-                       onClick={() => removeTopping(topping.id)}
-                color="error"
-                     >
-                       <Delete />
-                     </IconButton>
-                   </Box>
-        ))}
-        <Button
-          variant="outlined"
-                   onClick={addTopping}
-                   startIcon={<Add />}
-                   size="small"
-                   sx={{ mt: 1 }}
-                 >
-                   Süsleme Ekle
-        </Button>
-               </Grid>
-
-               {/* Sos */}
-               <Grid item xs={12} md={6}>
-                 <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                   Sos
-        </Typography>
-                 {fillingDetails.sauces && fillingDetails.sauces.map((sauce) => (
-                   <Box key={sauce.id} sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
-              <TextField
-                       size="small"
-                       label="Sos Adı"
-                       value={sauce.name}
-                       onChange={(e) => updateSauce(sauce.id, 'name', e.target.value)}
-                       placeholder="Örn: Çikolata Sosu"
-                       sx={{ flex: 1 }}
-                     />
-              <TextField
-                       size="small"
-                       label="Marka"
-                       value={sauce.brand}
-                       onChange={(e) => updateSauce(sauce.id, 'brand', e.target.value)}
-                       placeholder="Örn: Ferrero"
-                       sx={{ width: 150 }}
-                     />
-                     <TextField
-                       size="small"
-                label="Miktar"
-                       value={sauce.amount}
-                       onChange={(e) => updateSauce(sauce.id, 'amount', e.target.value)}
-                       placeholder="Örn: 100"
-                       sx={{ width: 120 }}
-                     />
-                     <TextField
-                       size="small"
-                       label="Birim"
-                       value={sauce.unit}
-                       onChange={(e) => updateSauce(sauce.id, 'unit', e.target.value)}
-                       placeholder="ml, lt"
-                       sx={{ width: 100 }}
-                     />
-                     <IconButton
-                       size="small"
-                       onClick={() => removeSauce(sauce.id)}
-                color="error"
-                     >
-                       <Delete />
-                     </IconButton>
-                   </Box>
-        ))}
-        <Button
-          variant="outlined"
-                   onClick={addSauce}
-                   startIcon={<Add />}
-                   size="small"
-                   sx={{ mt: 1 }}
-                 >
-                   Sos Ekle
-        </Button>
-               </Grid>
             </Grid>
 
             {/* Fotoğraflar */}
@@ -935,4 +734,4 @@ const NewReport = () => {
   );
 };
 
-export default NewReport;
+export default NewFridgeReport;

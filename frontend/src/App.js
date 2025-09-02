@@ -7,6 +7,7 @@ import Header from './components/Header';
 import Login from './components/Login';
 import AdminPanel from './components/AdminPanel';
 import NewReport from './components/NewReport';
+import NewFridgeReport from './components/NewFridgeReport';
 import Dashboard from './components/Dashboard';
 import './App.css';
 
@@ -97,6 +98,11 @@ const AppRoutes = () => {
         <Route path="/new-report" element={
           <ProtectedRoute allowedRoles={['routeman']}>
             <NewReport />
+          </ProtectedRoute>
+        } />
+        <Route path="/new-fridge-report" element={
+          <ProtectedRoute allowedRoles={['routeman']}>
+            <NewFridgeReport />
           </ProtectedRoute>
         } />
         <Route path="/dashboard" element={

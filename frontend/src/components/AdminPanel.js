@@ -15,6 +15,7 @@ const AdminPanel = () => {
   const { userData } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [reports, setReports] = useState([]);
+  const [filteredReports, setFilteredReports] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,6 +25,7 @@ const AdminPanel = () => {
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState(null);
+  const [reportTypeFilter, setReportTypeFilter] = useState('all'); // 'all', 'iceCream', 'fridge'
   
   // Kullanıcı ekleme formu
   const [newUser, setNewUser] = useState({
@@ -70,6 +72,28 @@ const AdminPanel = () => {
       setLoading(false);
     }
   }, []);
+
+  // Raporları filtrele
+  useEffect(() => {
+    let filtered = reports;
+    
+    switch (reportTypeFilter) {
+      case 'iceCream':
+        filtered = reports.filter(report => 
+          !report.reportType || report.reportType === 'iceCream'
+        );
+        break;
+      case 'fridge':
+        filtered = reports.filter(report => 
+          report.reportType === 'fridge'
+        );
+        break;
+      default:
+        filtered = reports;
+    }
+    
+    setFilteredReports(filtered);
+  }, [reports, reportTypeFilter]);
 
   // useEffect'i sonra kullan
   useEffect(() => {
@@ -224,7 +248,7 @@ const AdminPanel = () => {
 
   const handleExportReports = () => {
     try {
-      const csvContent = generateCSV(reports);
+      const csvContent = generateCSV(filteredReports);
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -243,7 +267,7 @@ const AdminPanel = () => {
   };
 
   const generateCSV = (reports) => {
-    const headers = ['ID', 'Lokasyon', 'Makine Seri No', 'Kullanıcı', 'Tarih', 'Durum', 'Notlar'];
+    const headers = ['ID', 'Lokasyon', 'Makine Seri No', 'Kullanıcı', 'Tarih', 'Durum', 'Rapor Türü', 'Notlar'];
     const rows = reports.map(report => [
       report.id,
       report.location,
@@ -251,6 +275,7 @@ const AdminPanel = () => {
       report.userName,
       report.createdAt ? new Date(report.createdAt).toLocaleDateString('tr-TR') : '',
       report.status,
+      report.reportType === 'fridge' ? 'Taze Dolap Dolum' : 'Dondurma Temizlik',
       report.notes
     ]);
     
@@ -300,6 +325,28 @@ const AdminPanel = () => {
       case 'pending': return 'Bekliyor';
       case 'cancelled': return 'İptal Edildi';
       default: return status;
+    }
+  };
+
+  const getReportTypeText = (reportType) => {
+    switch (reportType) {
+      case 'fridge': return 'Taze Dolap Dolum';
+      case 'iceCream': 
+      case undefined: 
+      case null: 
+        return 'Dondurma Temizlik';
+      default: return reportType;
+    }
+  };
+
+  const getReportTypeColor = (reportType) => {
+    switch (reportType) {
+      case 'fridge': return 'info';
+      case 'iceCream': 
+      case undefined: 
+      case null: 
+        return 'primary';
+      default: return 'default';
     }
   };
 
@@ -359,20 +406,34 @@ const AdminPanel = () => {
         {activeTab === 0 && (
           <Box sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
-                Tüm Raporlar ({reports.length})
-              </Typography>
+              <Box>
+                <Typography variant="h6" sx={{ display: 'inline-block', mr: 2 }}>
+                  Tüm Raporlar ({filteredReports.length})
+                </Typography>
+                <FormControl sx={{ minWidth: 120 }}>
+                  <InputLabel>Rapor Türü</InputLabel>
+                  <Select
+                    value={reportTypeFilter}
+                    label="Rapor Türü"
+                    onChange={(e) => setReportTypeFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">Tümü</MenuItem>
+                    <MenuItem value="iceCream">Dondurma Temizlik</MenuItem>
+                    <MenuItem value="fridge">Taze Dolap Dolum</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
               <Button
                 variant="contained"
                 onClick={handleExportReports}
-                disabled={reports.length === 0 || loading}
+                disabled={filteredReports.length === 0 || loading}
                 startIcon={<Download />}
               >
                 CSV Olarak Dışa Aktar
               </Button>
             </Box>
 
-            {reports.length === 0 ? (
+            {filteredReports.length === 0 ? (
               <Alert severity="info">Henüz rapor bulunmuyor.</Alert>
             ) : (
               <TableContainer>
@@ -385,11 +446,12 @@ const AdminPanel = () => {
                       <TableCell>Kullanıcı</TableCell>
                       <TableCell>Tarih</TableCell>
                       <TableCell>Durum</TableCell>
+                      <TableCell>Rapor Türü</TableCell>
                       <TableCell>İşlemler</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {reports.map((report) => (
+                    {filteredReports.map((report) => (
                       <React.Fragment key={report.id}>
                         <TableRow>
                           <TableCell>
@@ -409,6 +471,13 @@ const AdminPanel = () => {
                             <Chip
                               label={getStatusText(report.status)}
                               color={getStatusColor(report.status)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={getReportTypeText(report.reportType)}
+                              color={getReportTypeColor(report.reportType)}
                               size="small"
                             />
                           </TableCell>
@@ -434,7 +503,7 @@ const AdminPanel = () => {
                           </TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+                          <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
                             <Collapse in={expandedRows.has(report.id)} timeout="auto" unmountOnExit>
                               <Box sx={{ margin: 1 }}>
                                 <Grid container spacing={2}>
@@ -458,21 +527,57 @@ const AdminPanel = () => {
                                     </Card>
                                   </Grid>
 
-                                  {/* Checklist Özeti */}
+                                  {/* Checklist Özeti veya Slot Bilgisi */}
                                   <Grid item xs={12} md={6}>
-                                    <Card variant="outlined">
-                                      <CardContent>
-                                        <Typography variant="h6" gutterBottom>
-                                          Checklist Özeti
-                                        </Typography>
-                                        <Typography variant="body2">
-                                          <strong>Ekipman:</strong> {report.equipmentChecklist?.filter(item => item.completed).length || 0}/{report.equipmentChecklist?.length || 0}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                          <strong>Temizlik:</strong> {report.cleaningChecklist?.filter(item => item.completed).length || 0}/{report.cleaningChecklist?.length || 0}
-                                        </Typography>
-                                      </CardContent>
-                                    </Card>
+                                    {report.reportType === 'fridge' ? (
+                                      <Card variant="outlined">
+                                        <CardContent>
+                                          <Typography variant="h6" gutterBottom>
+                                            Slot Bilgisi
+                                          </Typography>
+                                          <Typography variant="body2">
+                                            <strong>Dolu Slot Sayısı:</strong> {report.slots?.filter(slot => slot.commodity).length || 0}/58
+                                          </Typography>
+                                          <Typography variant="body2">
+                                            <strong>Toplam Ürün Miktarı:</strong> {
+                                              report.slots?.reduce((total, slot) => 
+                                                total + (parseInt(slot.quantity) || 0), 0
+                                              ) || 0
+                                            }
+                                          </Typography>
+                                        </CardContent>
+                                      </Card>
+                                    ) : (
+                                      <Card variant="outlined">
+                                        <CardContent>
+                                          <Typography variant="h6" gutterBottom>
+                                            Checklist Özeti
+                                          </Typography>
+                                          <Typography variant="body2">
+                                            <strong>Ekipman:</strong> {report.equipmentChecklist?.filter(item => item.completed).length || 0}/{report.equipmentChecklist?.length || 0}
+                                          </Typography>
+                                          <Typography variant="body2">
+                                            <strong>Temizlik:</strong> {report.cleaningChecklist?.filter(item => item.completed).length || 0}/{report.cleaningChecklist?.length || 0}
+                                          </Typography>
+                                          {/* Yeni alanlar */}
+                                          {report.cupStock !== undefined && (
+                                            <Typography variant="body2">
+                                              <strong>Bardak Stok:</strong> {report.cupStock}
+                                            </Typography>
+                                          )}
+                                          {report.waste !== undefined && (
+                                            <Typography variant="body2">
+                                              <strong>Zayi:</strong> {report.waste}
+                                            </Typography>
+                                          )}
+                                          {report.stockInfo !== undefined && (
+                                            <Typography variant="body2">
+                                              <strong>Yedek/Stok:</strong> {report.stockInfo}
+                                            </Typography>
+                                          )}
+                                        </CardContent>
+                                      </Card>
+                                    )}
                                   </Grid>
 
                                   {/* Fotoğraflar */}
@@ -801,110 +906,205 @@ const AdminPanel = () => {
                   </List>
                 </Grid>
 
-                {/* Checklist Detayları */}
+                {/* Checklist Detayları veya Slot Bilgisi */}
                 <Grid item xs={12} md={6}>
-                  <Typography variant="h6" gutterBottom>
-                    Checklist Detayları
-                  </Typography>
-                  
-                  {/* Ekipman Checklist */}
-                  <Typography variant="subtitle2" gutterBottom>
-                    Ekipman Kontrolü
-                  </Typography>
-                  <List dense>
-                    {selectedReport.equipmentChecklist?.map((item) => (
-                      <ListItem key={item.id}>
-                        <ListItemText
-                          primary={item.text}
-                          secondary={item.completed ? `Tamamlandı: ${formatDate(item.completedAt)}` : 'Tamamlanmadı'}
-                        />
-                        {item.completed ? (
-                          <CheckCircle color="success" />
-                        ) : (
-                          <Cancel color="error" />
+                  {selectedReport.reportType === 'fridge' ? (
+                    <>
+                      <Typography variant="h6" gutterBottom>
+                        Slot Bilgisi
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 2 }}>
+                        <strong>Dolu Slot Sayısı:</strong> {selectedReport.slots?.filter(slot => slot.commodity).length || 0}/58
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 2 }}>
+                        <strong>Toplam Ürün Miktarı:</strong> {
+                          selectedReport.slots?.reduce((total, slot) => 
+                            total + (parseInt(slot.quantity) || 0), 0
+                          ) || 0
+                        }
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Detaylı Slot Bilgisi:</strong>
+                      </Typography>
+                      <List dense>
+                        {selectedReport.slots?.slice(0, 10).map((slot, index) => (
+                          <ListItem key={index}>
+                            <ListItemText
+                              primary={`Slot ${slot.id}: ${slot.commodity || 'Boş'}`}
+                              secondary={`Miktar: ${slot.quantity || 'N/A'} | SKT: ${slot.expiryDate || 'N/A'} | Parti: ${slot.batchNumber || 'N/A'}`}
+                            />
+                          </ListItem>
+                        ))}
+                        {selectedReport.slots?.length > 10 && (
+                          <ListItem>
+                            <ListItemText
+                              primary={`... ve ${selectedReport.slots.length - 10} daha fazla slot`}
+                            />
+                          </ListItem>
                         )}
-                      </ListItem>
-                    ))}
-                  </List>
+                      </List>
+                    </>
+                  ) : (
+                    <>
+                      <Typography variant="h6" gutterBottom>
+                        Checklist Detayları
+                      </Typography>
+                      
+                      {/* Ekipman Checklist */}
+                      <Typography variant="subtitle2" gutterBottom>
+                        Ekipman Kontrolü
+                      </Typography>
+                      <List dense>
+                        {selectedReport.equipmentChecklist?.map((item) => (
+                          <ListItem key={item.id}>
+                            <ListItemText
+                              primary={item.text}
+                              secondary={item.completed ? `Tamamlandı: ${formatDate(item.completedAt)}` : 'Tamamlanmadı'}
+                            />
+                            {item.completed ? (
+                              <CheckCircle color="success" />
+                            ) : (
+                              <Cancel color="error" />
+                            )}
+                          </ListItem>
+                        ))}
+                      </List>
 
-                  <Divider sx={{ my: 2 }} />
+                      <Divider sx={{ my: 2 }} />
 
-                  {/* Temizlik Checklist */}
-                  <Typography variant="subtitle2" gutterBottom>
-                    Temizlik Kontrolü
-                  </Typography>
-                  <List dense>
-                    {selectedReport.cleaningChecklist?.map((item) => (
-                      <ListItem key={item.id}>
-                        <ListItemText
-                          primary={item.text}
-                          secondary={item.completed ? `Tamamlandı: ${formatDate(item.completedAt)}` : 'Tamamlanmadı'}
-                        />
-                        {item.completed ? (
-                          <CheckCircle color="success" />
-                        ) : (
-                          <Cancel color="error" />
-                        )}
-                      </ListItem>
-                    ))}
-                  </List>
+                      {/* Temizlik Checklist */}
+                      <Typography variant="subtitle2" gutterBottom>
+                        Temizlik Kontrolü
+                      </Typography>
+                      <List dense>
+                        {selectedReport.cleaningChecklist?.map((item) => (
+                          <ListItem key={item.id}>
+                            <ListItemText
+                              primary={item.text}
+                              secondary={item.completed ? `Tamamlandı: ${formatDate(item.completedAt)}` : 'Tamamlanmadı'}
+                            />
+                            {item.completed ? (
+                              <CheckCircle color="success" />
+                            ) : (
+                              <Cancel color="error" />
+                            )}
+                          </ListItem>
+                        ))}
+                      </List>
+
+                      {/* Yeni alanlar */}
+                      {(selectedReport.cupStock !== undefined || 
+                        selectedReport.waste !== undefined || 
+                        selectedReport.stockInfo !== undefined) && (
+                        <>
+                          <Divider sx={{ my: 2 }} />
+                          <Typography variant="h6" gutterBottom>
+                            Ek Bilgiler
+                          </Typography>
+                          {selectedReport.cupStock !== undefined && (
+                            <Typography variant="body2">
+                              <strong>Bardak Stok:</strong> {selectedReport.cupStock}
+                            </Typography>
+                          )}
+                          {selectedReport.waste !== undefined && (
+                            <Typography variant="body2">
+                              <strong>Zayi:</strong> {selectedReport.waste}
+                            </Typography>
+                          )}
+                          {selectedReport.stockInfo !== undefined && (
+                            <Typography variant="body2">
+                              <strong>Yedek/Stok:</strong> {selectedReport.stockInfo}
+                            </Typography>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
                 </Grid>
 
-                {/* Dolum Detayları */}
+                {/* Dolum Detayları veya Slot Detayları */}
                 <Grid item xs={12}>
                   <Typography variant="h6" gutterBottom>
-                    Dolum Detayları
+                    {selectedReport.reportType === 'fridge' ? 'Slot Detayları' : 'Dolum Detayları'}
                   </Typography>
-                  <Grid container spacing={2}>
-                    {/* Dondurma Bazı */}
-                    <Grid item xs={12} md={4}>
-                      <Card variant="outlined">
-                        <CardContent>
-                          <Typography variant="subtitle2" gutterBottom>
-                            Dondurma Bazı
-                          </Typography>
-                          <Typography variant="body2">
-                            Miktar: {selectedReport.fillingDetails?.iceCreamBase?.amount || '0'} {selectedReport.fillingDetails?.iceCreamBase?.unit || ''}
-                          </Typography>
-                          <Typography variant="body2">
-                            Tip: {selectedReport.fillingDetails?.iceCreamBase?.unitType || 'N/A'}
-                          </Typography>
-                        </CardContent>
-                      </Card>
+                  {selectedReport.reportType === 'fridge' ? (
+                    <Grid container spacing={2}>
+                      {selectedReport.slots?.map((slot, index) => (
+                        <Grid item xs={12} sm={6} md={4} key={index}>
+                          <Card variant="outlined">
+                            <CardContent>
+                              <Typography variant="subtitle2" gutterBottom>
+                                Slot {slot.id}
+                              </Typography>
+                              <Typography variant="body2">
+                                <strong>Ürün:</strong> {slot.commodity || 'Boş'}
+                              </Typography>
+                              <Typography variant="body2">
+                                <strong>Miktar:</strong> {slot.quantity || 'N/A'}
+                              </Typography>
+                              <Typography variant="body2">
+                                <strong>SKT:</strong> {slot.expiryDate || 'N/A'}
+                              </Typography>
+                              <Typography variant="body2">
+                                <strong>Parti:</strong> {slot.batchNumber || 'N/A'}
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
                     </Grid>
-
-                    {/* Süslemeler */}
-                    <Grid item xs={12} md={4}>
-                      <Card variant="outlined">
-                        <CardContent>
-                          <Typography variant="subtitle2" gutterBottom>
-                            Süslemeler ({selectedReport.fillingDetails?.toppings?.length || 0})
-                          </Typography>
-                          {selectedReport.fillingDetails?.toppings?.map((topping, index) => (
-                            <Typography key={index} variant="body2">
-                              {topping.name} ({topping.brand}) - {topping.amount} {topping.unit}
+                  ) : (
+                    <Grid container spacing={2}>
+                      {/* Dondurma Bazı */}
+                      <Grid item xs={12} md={4}>
+                        <Card variant="outlined">
+                          <CardContent>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Dondurma Bazı
                             </Typography>
-                          ))}
-                        </CardContent>
-                      </Card>
-                    </Grid>
-
-                    {/* Soslar */}
-                    <Grid item xs={12} md={4}>
-                      <Card variant="outlined">
-                        <CardContent>
-                          <Typography variant="subtitle2" gutterBottom>
-                            Soslar ({selectedReport.fillingDetails?.sauces?.length || 0})
-                          </Typography>
-                          {selectedReport.fillingDetails?.sauces?.map((sauce, index) => (
-                            <Typography key={index} variant="body2">
-                              {sauce.name} ({sauce.brand}) - {sauce.amount} {sauce.unit}
+                            <Typography variant="body2">
+                              Miktar: {selectedReport.fillingDetails?.iceCreamBase?.amount || '0'} {selectedReport.fillingDetails?.iceCreamBase?.unit || ''}
                             </Typography>
-                          ))}
-                        </CardContent>
-                      </Card>
+                            <Typography variant="body2">
+                              Tip: {selectedReport.fillingDetails?.iceCreamBase?.unitType || 'N/A'}
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+
+                      {/* Süslemeler */}
+                      <Grid item xs={12} md={4}>
+                        <Card variant="outlined">
+                          <CardContent>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Süslemeler ({selectedReport.fillingDetails?.toppings?.length || 0})
+                            </Typography>
+                            {selectedReport.fillingDetails?.toppings?.map((topping, index) => (
+                              <Typography key={index} variant="body2">
+                                {topping.name} ({topping.brand}) - {topping.amount} {topping.unit}
+                              </Typography>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      </Grid>
+
+                      {/* Soslar */}
+                      <Grid item xs={12} md={4}>
+                        <Card variant="outlined">
+                          <CardContent>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Soslar ({selectedReport.fillingDetails?.sauces?.length || 0})
+                            </Typography>
+                            {selectedReport.fillingDetails?.sauces?.map((sauce, index) => (
+                              <Typography key={index} variant="body2">
+                                {sauce.name} ({sauce.brand}) - {sauce.amount} {sauce.unit}
+                              </Typography>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      </Grid>
                     </Grid>
-                  </Grid>
+                  )}
                 </Grid>
 
                 {/* Fotoğraflar */}

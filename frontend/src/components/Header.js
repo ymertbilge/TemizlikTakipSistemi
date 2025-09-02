@@ -1,7 +1,7 @@
 import React from 'react';
 import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Assignment, Dashboard, AdminPanelSettings, Person, Logout, ListAlt } from '@mui/icons-material';
+import { Assignment, Dashboard, AdminPanelSettings, Person, Logout, ListAlt, Kitchen } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 const Header = () => {
@@ -88,7 +88,17 @@ const Header = () => {
                   backgroundColor: location.pathname === '/new-report' ? 'rgba(255,255,255,0.1)' : 'transparent' 
                 }}
               >
-                Yeni Rapor
+                Dondurma Temizlik
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<Kitchen />}
+                onClick={() => navigate('/new-fridge-report')}
+                sx={{ 
+                  backgroundColor: location.pathname === '/new-fridge-report' ? 'rgba(255,255,255,0.1)' : 'transparent' 
+                }}
+              >
+                Taze Dolap Dolum
               </Button>
             </>
           )}
@@ -130,10 +140,16 @@ const Header = () => {
           </MenuItem>
           )}
           {userData.role === 'routeman' && (
-            <MenuItem onClick={() => handleNavigate('/new-report')}>
-              <Assignment sx={{ mr: 1 }} />
-              Yeni Rapor
-            </MenuItem>
+            <>
+              <MenuItem onClick={() => handleNavigate('/new-report')}>
+                <Assignment sx={{ mr: 1 }} />
+                Dondurma Temizlik
+              </MenuItem>
+              <MenuItem onClick={() => handleNavigate('/new-fridge-report')}>
+                <Kitchen sx={{ mr: 1 }} />
+                Taze Dolap Dolum
+              </MenuItem>
+            </>
           )}
           <MenuItem onClick={handleLogout}>
             <Logout sx={{ mr: 1 }} />

@@ -106,6 +106,38 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Oturum zaman aşımını kontrol et
+  useEffect(() => {
+    let inactivityTimer;
+    
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      // 2 saat = 7200000 ms
+      inactivityTimer = setTimeout(() => {
+        logout();
+      }, 7200000); // 2 saat
+    };
+    
+    // İlk yüklemede timer'ı başlat
+    resetInactivityTimer();
+    
+    // Mouse hareketi ve tuş vuruşlarını dinle
+    window.addEventListener('mousemove', resetInactivityTimer);
+    window.addEventListener('mousedown', resetInactivityTimer);
+    window.addEventListener('keypress', resetInactivityTimer);
+    window.addEventListener('touchstart', resetInactivityTimer);
+    window.addEventListener('scroll', resetInactivityTimer);
+    
+    return () => {
+      clearTimeout(inactivityTimer);
+      window.removeEventListener('mousemove', resetInactivityTimer);
+      window.removeEventListener('mousedown', resetInactivityTimer);
+      window.removeEventListener('keypress', resetInactivityTimer);
+      window.removeEventListener('touchstart', resetInactivityTimer);
+      window.removeEventListener('scroll', resetInactivityTimer);
+    };
+  }, []);
+
   // Get current user from Firebase
   const getCurrentUser = () => {
     return authService.getCurrentUser();
