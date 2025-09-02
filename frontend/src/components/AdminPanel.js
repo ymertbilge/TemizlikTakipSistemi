@@ -3,7 +3,8 @@ import {
   Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Button, Box, Chip, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Card, CardContent,
   CardMedia, IconButton, Collapse, List, ListItem, ListItemText, Divider, Alert, TextField,
-  FormControl, InputLabel, Select, MenuItem, Switch, FormControlLabel, Tabs, Tab, CircularProgress
+  FormControl, InputLabel, Select, MenuItem, Switch, FormControlLabel, Tabs, Tab, CircularProgress,
+  TablePagination
 } from '@mui/material';
 import { 
   Visibility, ExpandMore, ExpandLess, CheckCircle, Cancel, Delete, Download, Edit, CloudUpload, Add
@@ -33,7 +34,16 @@ const AdminPanel = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   
   // Commodity management states
+  const [commoditySearch, setCommoditySearch] = useState('');
+  const [commodityFilter, setCommodityFilter] = useState({
+    supplier: '',
+    type: '',
+    productName: '',
+    commodityCode: ''
+  });
+  const [commoditySortConfig, setCommoditySortConfig] = useState({ key: 'Product name', direction: 'asc' });
   const [commodities, setCommodities] = useState([]);
+  const [filteredCommodities, setFilteredCommodities] = useState([]);
   const [newCommodity, setNewCommodity] = useState({
     'Commodity code': '',
     'Product name': '',
@@ -73,6 +83,14 @@ const AdminPanel = () => {
     role: 'routeman',
     isActive: true
   });
+
+  // Sayfalama durumu
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  // Commodity sayfalama durumu
+  const [commodityPage, setCommodityPage] = useState(0);
+  const [commodityRowsPerPage, setCommodityRowsPerPage] = useState(10);
 
   // Fonksiyonları önce tanımla
   const fetchReports = useCallback(async () => {
@@ -203,6 +221,132 @@ const AdminPanel = () => {
     
     setFilteredReports(filtered);
   }, [reports, reportTypeFilter, dateFilter, locationFilter, machineSerialFilter, sortConfig]);
+
+  // Sayfalama için kullanılacak veriyi ayarla
+  const paginatedReports = filteredReports.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  // Sayfalama fonksiyonları
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0); // Sayfayı sıfırla
+  };
+
+  // Commodity sayfalama fonksiyonları
+  const handleCommodityChangePage = (event, newPage) => {
+    setCommodityPage(newPage);
+  };
+
+  const handleCommodityChangeRowsPerPage = (event) => {
+    setCommodityRowsPerPage(parseInt(event.target.value, 10));
+    setCommodityPage(0); // Sayfayı sıfırla
+  };
+
+  // Commodity sıralama fonksiyonu
+  const handleCommoditySort = (key) => {
+    setCommoditySortConfig(prev => {
+      if (prev.key === key) {
+        return { ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  // Commodity filtreleme ve sıralama
+  useEffect(() => {
+    let filtered = commodities;
+
+    // Genel arama
+    if (commoditySearch.trim()) {
+      const searchTerm = commoditySearch.toLowerCase();
+      filtered = filtered.filter(commodity => 
+        (commodity['Product name'] && commodity['Product name'].toLowerCase().includes(searchTerm)) ||
+        (commodity['Commodity code'] && commodity['Commodity code'].toLowerCase().includes(searchTerm)) ||
+        (commodity['Supplier'] && commodity['Supplier'].toLowerCase().includes(searchTerm)) ||
+        (commodity['Type'] && commodity['Type'].toLowerCase().includes(searchTerm))
+      );
+    }
+
+    // Tedarikçi filtresi
+    if (commodityFilter.supplier.trim()) {
+      filtered = filtered.filter(commodity => 
+        commodity['Supplier'] && commodity['Supplier'].toLowerCase().includes(commodityFilter.supplier.toLowerCase())
+      );
+    }
+
+    // Tip filtresi
+    if (commodityFilter.type.trim()) {
+      filtered = filtered.filter(commodity => 
+        commodity['Type'] && commodity['Type'].toLowerCase().includes(commodityFilter.type.toLowerCase())
+      );
+    }
+
+    // Ürün adı filtresi
+    if (commodityFilter.productName.trim()) {
+      filtered = filtered.filter(commodity => 
+        commodity['Product name'] && commodity['Product name'].toLowerCase().includes(commodityFilter.productName.toLowerCase())
+      );
+    }
+
+    // Ürün kodu filtresi
+    if (commodityFilter.commodityCode.trim()) {
+      filtered = filtered.filter(commodity => 
+        commodity['Commodity code'] && commodity['Commodity code'].toLowerCase().includes(commodityFilter.commodityCode.toLowerCase())
+      );
+    }
+
+    // Sıralama
+    filtered.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (commoditySortConfig.key) {
+        case 'Product name':
+          aValue = (a['Product name'] || '').toLowerCase();
+          bValue = (b['Product name'] || '').toLowerCase();
+          break;
+        case 'Commodity code':
+          aValue = (a['Commodity code'] || '').toLowerCase();
+          bValue = (b['Commodity code'] || '').toLowerCase();
+          break;
+        case 'Supplier':
+          aValue = (a['Supplier'] || '').toLowerCase();
+          bValue = (b['Supplier'] || '').toLowerCase();
+          break;
+        case 'Type':
+          aValue = (a['Type'] || '').toLowerCase();
+          bValue = (b['Type'] || '').toLowerCase();
+          break;
+        case 'Unit price':
+          aValue = parseFloat(a['Unit price'] || 0);
+          bValue = parseFloat(b['Unit price'] || 0);
+          break;
+        case 'Cost price':
+          aValue = parseFloat(a['Cost price'] || 0);
+          bValue = parseFloat(b['Cost price'] || 0);
+          break;
+        default:
+          aValue = a[commoditySortConfig.key];
+          bValue = b[commoditySortConfig.key];
+      }
+      
+      if (aValue < bValue) {
+        return commoditySortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return commoditySortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    setFilteredCommodities(filtered);
+    setCommodityPage(0); // Filtre değiştiğinde sayfa numarasını sıfırla
+  }, [commodities, commoditySearch, commodityFilter, commoditySortConfig]);
+
+  // Sayfalanmış commodity'leri hesapla
+  const paginatedCommodities = filteredCommodities.slice(commodityPage * commodityRowsPerPage, commodityPage * commodityRowsPerPage + commodityRowsPerPage);
 
   // useEffect'i sonra kullan
   useEffect(() => {
@@ -564,7 +708,7 @@ const AdminPanel = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'completed': return 'success';
+      case 'completed': return 'primary';
       case 'pending': return 'warning';
       case 'cancelled': return 'error';
       default: return 'default';
@@ -593,11 +737,11 @@ const AdminPanel = () => {
 
   const getReportTypeColor = (reportType) => {
     switch (reportType) {
-      case 'fridge': return 'info';
+      case 'fridge': return 'success';
       case 'iceCream': 
       case undefined: 
       case null: 
-        return 'primary';
+        return 'secondary';
       default: return 'default';
     }
   };
@@ -608,6 +752,19 @@ const AdminPanel = () => {
     setLocationFilter('');
     setMachineSerialFilter('');
     setSortConfig({ key: 'createdAt', direction: 'desc' });
+    setPage(0); // Sayfa numarasını sıfırla
+  };
+
+  const clearCommodityFilters = () => {
+    setCommoditySearch('');
+    setCommodityFilter({
+      supplier: '',
+      type: '',
+      productName: '',
+      commodityCode: ''
+    });
+    setCommoditySortConfig({ key: 'Product name', direction: 'asc' });
+    setCommodityPage(0); // Sayfa numarasını sıfırla
   };
 
   const handleSort = (key) => {
@@ -784,293 +941,308 @@ const AdminPanel = () => {
             {filteredReports.length === 0 ? (
               <Alert severity="info">Henüz rapor bulunmuyor.</Alert>
             ) : (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Rapor ID</TableCell>
-                      <TableCell 
-                        onClick={() => handleSort('location')}
-                        sx={{ 
-                          cursor: 'pointer', 
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                          userSelect: 'none'
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          Lokasyon
-                          {sortConfig.key === 'location' && (
-                            <Box component="span" sx={{ ml: 1 }}>
-                              {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell 
-                        onClick={() => handleSort('machineSerialNumber')}
-                        sx={{ 
-                          cursor: 'pointer', 
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                          userSelect: 'none'
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          Makine Seri No
-                          {sortConfig.key === 'machineSerialNumber' && (
-                            <Box component="span" sx={{ ml: 1 }}>
-                              {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>Kullanıcı</TableCell>
-                      <TableCell 
-                        onClick={() => handleSort('createdAt')}
-                        sx={{ 
-                          cursor: 'pointer', 
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                          userSelect: 'none'
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          Tarih
-                          {sortConfig.key === 'createdAt' && (
-                            <Box component="span" sx={{ ml: 1 }}>
-                              {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>Durum</TableCell>
-                      <TableCell>Rapor Türü</TableCell>
-                      <TableCell>İşlemler</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredReports.map((report) => (
-                      <React.Fragment key={report.id}>
-                        <TableRow>
-                          <TableCell>
-                            <Button
-                              onClick={() => toggleRowExpansion(report.id)}
-                              startIcon={expandedRows.has(report.id) ? <ExpandLess /> : <ExpandMore />}
-                              size="small"
-                            >
-                              {report.id}
-                            </Button>
-                          </TableCell>
-                          <TableCell>{report.location}</TableCell>
-                          <TableCell>{report.machineSerialNumber}</TableCell>
-                          <TableCell>{report.userName || 'Bilinmiyor'}</TableCell>
-                          <TableCell>{formatDate(report.createdAt)}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={getStatusText(report.status)}
-                              color={getStatusColor(report.status)}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={getReportTypeText(report.reportType)}
-                              color={getReportTypeColor(report.reportType)}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <IconButton
-                                onClick={() => handleViewReport(report)}
-                                color="primary"
-                                size="small"
-                                title="Görüntüle"
-                              >
-                                <Visibility />
-                              </IconButton>
-                              <IconButton
-                                onClick={() => confirmDeleteReport(report)}
-                                color="error"
-                                size="small"
-                                title="Sil"
-                              >
-                                <Delete />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
-                            <Collapse in={expandedRows.has(report.id)} timeout="auto" unmountOnExit>
-                              <Box sx={{ margin: 1 }}>
-                                <Grid container spacing={2}>
-                                  {/* Temel Bilgiler */}
-                                  <Grid item xs={12} md={6}>
-                                    <Card variant="outlined">
-                                      <CardContent>
-                                        <Typography variant="h6" gutterBottom>
-                                          Temel Bilgiler
-                                        </Typography>
-                                        <Typography variant="body2">
-                                          <strong>Notlar:</strong> {report.notes || 'Not bulunmuyor'}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                          <strong>Oluşturulma:</strong> {formatDate(report.createdAt)}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                          <strong>Güncellenme:</strong> {formatDate(report.updatedAt)}
-                                        </Typography>
-                                      </CardContent>
-                                    </Card>
-                                  </Grid>
-
-                                  {/* Checklist Özeti veya Slot Bilgisi */}
-                                  <Grid item xs={12} md={6}>
-                                    {report.reportType === 'fridge' ? (
-                                      <Card variant="outlined">
-                                        <CardContent>
-                                          <Typography variant="h6" gutterBottom>
-                                            Slot Bilgisi
-                                          </Typography>
-                                          <Typography variant="body2">
-                                            <strong>Dolu Slot Sayısı:</strong> {report.slots?.filter(slot => slot.commodity).length || 0}/58
-                                          </Typography>
-                                          <Typography variant="body2">
-                                            <strong>Toplam Ürün Miktarı:</strong> {
-                                              report.slots?.reduce((total, slot) => 
-                                                total + (parseInt(slot.quantity) || 0), 0
-                                              ) || 0
-                                            }
-                                          </Typography>
-                                        </CardContent>
-                                      </Card>
-                                    ) : (
-                                      <Card variant="outlined">
-                                        <CardContent>
-                                          <Typography variant="h6" gutterBottom>
-                                            Checklist Özeti
-                                          </Typography>
-                                          <Typography variant="body2">
-                                            <strong>Ekipman:</strong> {report.equipmentChecklist?.filter(item => item.completed).length || 0}/{report.equipmentChecklist?.length || 0}
-                                          </Typography>
-                                          <Typography variant="body2">
-                                            <strong>Temizlik:</strong> {report.cleaningChecklist?.filter(item => item.completed).length || 0}/{report.cleaningChecklist?.length || 0}
-                                          </Typography>
-                                          {/* Yeni alanlar */}
-                                          {report.cupStock !== undefined && (
-                                            <Typography variant="body2">
-                                              <strong>Bardak Stok:</strong> {report.cupStock}
-                                            </Typography>
-                                          )}
-                                          {report.waste !== undefined && (
-                                            <Typography variant="body2">
-                                              <strong>Zayi:</strong> {report.waste}
-                                            </Typography>
-                                          )}
-                                          {report.stockInfo !== undefined && (
-                                            <Typography variant="body2">
-                                              <strong>Yedek/Stok:</strong> {report.stockInfo}
-                                            </Typography>
-                                          )}
-                                        </CardContent>
-                                      </Card>
-                                    )}
-                                  </Grid>
-
-                                  {/* Fotoğraflar */}
-                                  <Grid item xs={12}>
-                                    <Card variant="outlined">
-                                      <CardContent>
-                                        <Typography variant="h6" gutterBottom>
-                                          Fotoğraflar
-                                        </Typography>
-                                        <Grid container spacing={2}>
-                                          {/* Öncesi Fotoğraflar */}
-                                          {report.beforePhotos && report.beforePhotos.length > 0 && (
-                                            <Grid item xs={12} md={4}>
-                                              <Typography variant="subtitle2" gutterBottom>
-                                                Öncesi ({report.beforePhotos.length})
-                                              </Typography>
-                                              <Grid container spacing={1}>
-                                                {report.beforePhotos.map((photo, index) => (
-                                                  <Grid item xs={6} key={index}>
-                                                    <CardMedia
-                                                      component="img"
-                                                      height="120"
-                                                      image={photo}
-                                                      alt={`Öncesi ${index + 1}`}
-                                                      sx={{ objectFit: 'cover', borderRadius: 1 }}
-                                                    />
-                                                  </Grid>
-                                                ))}
-                                              </Grid>
-                                            </Grid>
-                                          )}
-
-                                          {/* Sonrası Fotoğraflar */}
-                                          {report.afterPhotos && report.afterPhotos.length > 0 && (
-                                            <Grid item xs={12} md={4}>
-                                              <Typography variant="subtitle2" gutterBottom>
-                                                Sonrası ({report.afterPhotos.length})
-                                              </Typography>
-                                              <Grid container spacing={1}>
-                                                {report.afterPhotos.map((photo, index) => (
-                                                  <Grid item xs={6} key={index}>
-                                                    <CardMedia
-                                                      component="img"
-                                                      height="120"
-                                                      image={photo}
-                                                      alt={`Sonrası ${index + 1}`}
-                                                      sx={{ objectFit: 'cover', borderRadius: 1 }}
-                                                    />
-                                                  </Grid>
-                                                ))}
-                                              </Grid>
-                                            </Grid>
-                                          )}
-
-                                          {/* Sorun Fotoğrafları */}
-                                          {report.issuePhotos && report.issuePhotos.length > 0 && (
-                                            <Grid item xs={12} md={4}>
-                                              <Typography variant="subtitle2" gutterBottom>
-                                                Sorun ({report.issuePhotos.length})
-                                              </Typography>
-                                              <Grid container spacing={1}>
-                                                {report.issuePhotos.map((photo, index) => (
-                                                  <Grid item xs={6} key={index}>
-                                                    <CardMedia
-                                                      component="img"
-                                                      height="120"
-                                                      image={photo}
-                                                      alt={`Sorun ${index + 1}`}
-                                                      sx={{ objectFit: 'cover', borderRadius: 1 }}
-                                                    />
-                                                  </Grid>
-                                                ))}
-                                              </Grid>
-                                            </Grid>
-                                          )}
-
-                                          {(!report.beforePhotos || report.beforePhotos.length === 0) &&
-                                           (!report.afterPhotos || report.afterPhotos.length === 0) &&
-                                           (!report.issuePhotos || report.issuePhotos.length === 0) && (
-                                            <Grid item xs={12}>
-                                              <Alert severity="info">Bu raporda fotoğraf bulunmuyor.</Alert>
-                                            </Grid>
-                                          )}
-                                        </Grid>
-                                      </CardContent>
-                                    </Card>
-                                  </Grid>
-                                </Grid>
+              <>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Rapor ID</TableCell>
+                        <TableCell 
+                          onClick={() => handleSort('location')}
+                          sx={{ 
+                            cursor: 'pointer', 
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                            userSelect: 'none'
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            Lokasyon
+                            {sortConfig.key === 'location' && (
+                              <Box component="span" sx={{ ml: 1 }}>
+                                {sortConfig.direction === 'asc' ? '↑' : '↓'}
                               </Box>
-                            </Collapse>
-                          </TableCell>
-                        </TableRow>
-                      </React.Fragment>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell 
+                          onClick={() => handleSort('machineSerialNumber')}
+                          sx={{ 
+                            cursor: 'pointer', 
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                            userSelect: 'none'
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            Makine Seri No
+                            {sortConfig.key === 'machineSerialNumber' && (
+                              <Box component="span" sx={{ ml: 1 }}>
+                                {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                              </Box>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>Kullanıcı</TableCell>
+                        <TableCell 
+                          onClick={() => handleSort('createdAt')}
+                          sx={{ 
+                            cursor: 'pointer', 
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                            userSelect: 'none'
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            Tarih
+                            {sortConfig.key === 'createdAt' && (
+                              <Box component="span" sx={{ ml: 1 }}>
+                                {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                              </Box>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>Durum</TableCell>
+                        <TableCell>Rapor Türü</TableCell>
+                        <TableCell>İşlemler</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {paginatedReports.map((report) => (
+                        <React.Fragment key={report.id}>
+                          <TableRow>
+                            <TableCell>
+                              <Button
+                                onClick={() => toggleRowExpansion(report.id)}
+                                startIcon={expandedRows.has(report.id) ? <ExpandLess /> : <ExpandMore />}
+                                size="small"
+                              >
+                                {report.id}
+                              </Button>
+                            </TableCell>
+                            <TableCell>{report.location}</TableCell>
+                            <TableCell>{report.machineSerialNumber}</TableCell>
+                            <TableCell>{report.userName || 'Bilinmiyor'}</TableCell>
+                            <TableCell>{formatDate(report.createdAt)}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={getStatusText(report.status)}
+                                color={getStatusColor(report.status)}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={getReportTypeText(report.reportType)}
+                                color={getReportTypeColor(report.reportType)}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <IconButton
+                                  onClick={() => handleViewReport(report)}
+                                  color="primary"
+                                  size="small"
+                                  title="Görüntüle"
+                                >
+                                  <Visibility />
+                                </IconButton>
+                                <IconButton
+                                  onClick={() => confirmDeleteReport(report)}
+                                  color="error"
+                                  size="small"
+                                  title="Sil"
+                                >
+                                  <Delete />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
+                              <Collapse in={expandedRows.has(report.id)} timeout="auto" unmountOnExit>
+                                <Box sx={{ margin: 1 }}>
+                                  <Grid container spacing={2}>
+                                    {/* Temel Bilgiler */}
+                                    <Grid item xs={12} md={6}>
+                                      <Card variant="outlined">
+                                        <CardContent>
+                                          <Typography variant="h6" gutterBottom>
+                                            Temel Bilgiler
+                                          </Typography>
+                                          <Typography variant="body2">
+                                            <strong>Notlar:</strong> {report.notes || 'Not bulunmuyor'}
+                                          </Typography>
+                                          <Typography variant="body2">
+                                            <strong>Oluşturulma:</strong> {formatDate(report.createdAt)}
+                                          </Typography>
+                                          <Typography variant="body2">
+                                            <strong>Güncellenme:</strong> {formatDate(report.updatedAt)}
+                                          </Typography>
+                                        </CardContent>
+                                      </Card>
+                                    </Grid>
+
+                                    {/* Checklist Özeti veya Slot Bilgisi */}
+                                    <Grid item xs={12} md={6}>
+                                      {report.reportType === 'fridge' ? (
+                                        <Card variant="outlined">
+                                          <CardContent>
+                                            <Typography variant="h6" gutterBottom>
+                                              Slot Bilgisi
+                                            </Typography>
+                                            <Typography variant="body2">
+                                              <strong>Dolu Slot Sayısı:</strong> {report.slots?.filter(slot => slot.commodity).length || 0}/58
+                                            </Typography>
+                                            <Typography variant="body2">
+                                              <strong>Toplam Ürün Miktarı:</strong> {
+                                                report.slots?.reduce((total, slot) => 
+                                                  total + (parseInt(slot.quantity) || 0), 0
+                                                ) || 0
+                                              }
+                                            </Typography>
+                                          </CardContent>
+                                        </Card>
+                                      ) : (
+                                        <Card variant="outlined">
+                                          <CardContent>
+                                            <Typography variant="h6" gutterBottom>
+                                              Checklist Özeti
+                                            </Typography>
+                                            <Typography variant="body2">
+                                              <strong>Ekipman:</strong> {report.equipmentChecklist?.filter(item => item.completed).length || 0}/{report.equipmentChecklist?.length || 0}
+                                            </Typography>
+                                            <Typography variant="body2">
+                                              <strong>Temizlik:</strong> {report.cleaningChecklist?.filter(item => item.completed).length || 0}/{report.cleaningChecklist?.length || 0}
+                                            </Typography>
+                                            {/* Yeni alanlar */}
+                                            {report.cupStock !== undefined && (
+                                              <Typography variant="body2">
+                                                <strong>Bardak Stok:</strong> {report.cupStock}
+                                              </Typography>
+                                            )}
+                                            {report.waste !== undefined && (
+                                              <Typography variant="body2">
+                                                <strong>Zayi:</strong> {report.waste}
+                                              </Typography>
+                                            )}
+                                            {report.stockInfo !== undefined && (
+                                              <Typography variant="body2">
+                                                <strong>Yedek/Stok:</strong> {report.stockInfo}
+                                              </Typography>
+                                            )}
+                                          </CardContent>
+                                        </Card>
+                                      )}
+                                    </Grid>
+
+                                    {/* Fotoğraflar */}
+                                    <Grid item xs={12}>
+                                      <Card variant="outlined">
+                                        <CardContent>
+                                          <Typography variant="h6" gutterBottom>
+                                            Fotoğraflar
+                                          </Typography>
+                                          <Grid container spacing={2}>
+                                            {/* Öncesi Fotoğraflar */}
+                                            {report.beforePhotos && report.beforePhotos.length > 0 && (
+                                              <Grid item xs={12} md={4}>
+                                                <Typography variant="subtitle2" gutterBottom>
+                                                  Öncesi ({report.beforePhotos.length})
+                                                </Typography>
+                                                <Grid container spacing={1}>
+                                                  {report.beforePhotos.map((photo, index) => (
+                                                    <Grid item xs={6} key={index}>
+                                                      <CardMedia
+                                                        component="img"
+                                                        height="120"
+                                                        image={photo}
+                                                        alt={`Öncesi ${index + 1}`}
+                                                        sx={{ objectFit: 'cover', borderRadius: 1 }}
+                                                      />
+                                                    </Grid>
+                                                  ))}
+                                                </Grid>
+                                              </Grid>
+                                            )}
+
+                                            {/* Sonrası Fotoğraflar */}
+                                            {report.afterPhotos && report.afterPhotos.length > 0 && (
+                                              <Grid item xs={12} md={4}>
+                                                <Typography variant="subtitle2" gutterBottom>
+                                                  Sonrası ({report.afterPhotos.length})
+                                                </Typography>
+                                                <Grid container spacing={1}>
+                                                  {report.afterPhotos.map((photo, index) => (
+                                                    <Grid item xs={6} key={index}>
+                                                      <CardMedia
+                                                        component="img"
+                                                        height="120"
+                                                        image={photo}
+                                                        alt={`Sonrası ${index + 1}`}
+                                                        sx={{ objectFit: 'cover', borderRadius: 1 }}
+                                                      />
+                                                    </Grid>
+                                                  ))}
+                                                </Grid>
+                                              </Grid>
+                                            )}
+
+                                            {/* Sorun Fotoğrafları */}
+                                            {report.issuePhotos && report.issuePhotos.length > 0 && (
+                                              <Grid item xs={12} md={4}>
+                                                <Typography variant="subtitle2" gutterBottom>
+                                                  Sorun ({report.issuePhotos.length})
+                                                </Typography>
+                                                <Grid container spacing={1}>
+                                                  {report.issuePhotos.map((photo, index) => (
+                                                    <Grid item xs={6} key={index}>
+                                                      <CardMedia
+                                                        component="img"
+                                                        height="120"
+                                                        image={photo}
+                                                        alt={`Sorun ${index + 1}`}
+                                                        sx={{ objectFit: 'cover', borderRadius: 1 }}
+                                                      />
+                                                    </Grid>
+                                                  ))}
+                                                </Grid>
+                                              </Grid>
+                                            )}
+
+                                            {(!report.beforePhotos || report.beforePhotos.length === 0) &&
+                                             (!report.afterPhotos || report.afterPhotos.length === 0) &&
+                                             (!report.issuePhotos || report.issuePhotos.length === 0) && (
+                                              <Grid item xs={12}>
+                                                <Alert severity="info">Bu raporda fotoğraf bulunmuyor.</Alert>
+                                              </Grid>
+                                            )}
+                                          </Grid>
+                                        </CardContent>
+                                      </Card>
+                                    </Grid>
+                                  </Grid>
+                                </Box>
+                              </Collapse>
+                            </TableCell>
+                          </TableRow>
+                        </React.Fragment>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                
+                {/* Sayfalama */}
+                <TablePagination
+                  component="div"
+                  count={filteredReports.length}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  rowsPerPageOptions={[5, 10, 25, 50]}
+                  labelRowsPerPage="Sayfa başına rapor:"
+                  labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
+                />
+              </>
             )}
           </Box>
         )}
@@ -1258,9 +1430,16 @@ const AdminPanel = () => {
           <Box sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
               <Typography variant="h6" gutterBottom>
-                Ürün Yönetimi ({commodities.length})
+                Ürün Yönetimi ({filteredCommodities.length}/{commodities.length})
               </Typography>
-              <Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  onClick={clearCommodityFilters}
+                  size="small"
+                >
+                  Filtreleri Temizle
+                </Button>
                 <input
                   accept=".json"
                   style={{ display: 'none' }}
@@ -1280,6 +1459,82 @@ const AdminPanel = () => {
                 </label>
               </Box>
             </Box>
+
+            {/* Ürün Arama ve Filtreleme */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Arama ve Filtreleme
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Genel Arama"
+                    value={commoditySearch}
+                    onChange={(e) => setCommoditySearch(e.target.value)}
+                    placeholder="Ürün adı, kodu, tedarikçi veya tip ara..."
+                    helperText="Tüm alanlarda arama yapar"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Tedarikçi Filtresi"
+                    value={commodityFilter.supplier}
+                    onChange={(e) => setCommodityFilter({ ...commodityFilter, supplier: e.target.value })}
+                    placeholder="Tedarikçi ara..."
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Tip Filtresi"
+                    value={commodityFilter.type}
+                    onChange={(e) => setCommodityFilter({ ...commodityFilter, type: e.target.value })}
+                    placeholder="Tip ara..."
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Ürün Adı Filtresi"
+                    value={commodityFilter.productName}
+                    onChange={(e) => setCommodityFilter({ ...commodityFilter, productName: e.target.value })}
+                    placeholder="Ürün adı ara..."
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Ürün Kodu Filtresi"
+                    value={commodityFilter.commodityCode}
+                    onChange={(e) => setCommodityFilter({ ...commodityFilter, commodityCode: e.target.value })}
+                    placeholder="Ürün kodu ara..."
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
+
+            {/* Aktif Ürün Filtreleri Bilgisi */}
+            {(commoditySearch || commodityFilter.supplier || commodityFilter.type || commodityFilter.productName || commodityFilter.commodityCode) && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>Aktif Filtreler:</strong>
+                  {commoditySearch && ` Genel Arama: "${commoditySearch}"`}
+                  {commodityFilter.supplier && ` Tedarikçi: "${commodityFilter.supplier}"`}
+                  {commodityFilter.type && ` Tip: "${commodityFilter.type}"`}
+                  {commodityFilter.productName && ` Ürün Adı: "${commodityFilter.productName}"`}
+                  {commodityFilter.commodityCode && ` Ürün Kodu: "${commodityFilter.commodityCode}"`}
+                  <br />
+                  <strong>Sıralama:</strong> {commoditySortConfig.key === 'Product name' ? 'Ürün Adı' : 
+                    commoditySortConfig.key === 'Commodity code' ? 'Ürün Kodu' : 
+                    commoditySortConfig.key === 'Supplier' ? 'Tedarikçi' : 
+                    commoditySortConfig.key === 'Type' ? 'Tip' : 
+                    commoditySortConfig.key === 'Unit price' ? 'Birim Fiyat' : 'Maliyet Fiyatı'} 
+                  ({commoditySortConfig.direction === 'asc' ? 'Artan' : 'Azalan'})
+                </Typography>
+              </Alert>
+            )}
 
             {/* Yeni Ürün Ekleme Formu */}
             <Paper sx={{ p: 3, mb: 3 }}>
@@ -1387,19 +1642,115 @@ const AdminPanel = () => {
 
             <TableContainer>
               <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Ürün Kodu</TableCell>
-                    <TableCell>Ürün Adı</TableCell>
-                    <TableCell>Birim Fiyat</TableCell>
-                    <TableCell>Maliyet Fiyatı</TableCell>
-                    <TableCell>Tedarikçi</TableCell>
-                    <TableCell>Tip</TableCell>
-                    <TableCell>İşlemler</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {commodities.map((commodity) => (
+                                  <TableHead>
+                    <TableRow>
+                      <TableCell 
+                        onClick={() => handleCommoditySort('Commodity code')}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                          userSelect: 'none'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          Ürün Kodu
+                          {commoditySortConfig.key === 'Commodity code' && (
+                            <Box component="span" sx={{ ml: 1 }}>
+                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell 
+                        onClick={() => handleCommoditySort('Product name')}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                          userSelect: 'none'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          Ürün Adı
+                          {commoditySortConfig.key === 'Product name' && (
+                            <Box component="span" sx={{ ml: 1 }}>
+                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell 
+                        onClick={() => handleCommoditySort('Unit price')}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                          userSelect: 'none'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          Birim Fiyat
+                          {commoditySortConfig.key === 'Unit price' && (
+                            <Box component="span" sx={{ ml: 1 }}>
+                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell 
+                        onClick={() => handleCommoditySort('Cost price')}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                          userSelect: 'none'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          Maliyet Fiyatı
+                          {commoditySortConfig.key === 'Cost price' && (
+                            <Box component="span" sx={{ ml: 1 }}>
+                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell 
+                        onClick={() => handleCommoditySort('Supplier')}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                          userSelect: 'none'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          Tedarikçi
+                          {commoditySortConfig.key === 'Supplier' && (
+                            <Box component="span" sx={{ ml: 1 }}>
+                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell 
+                        onClick={() => handleCommoditySort('Type')}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                          userSelect: 'none'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          Tip
+                          {commoditySortConfig.key === 'Type' && (
+                            <Box component="span" sx={{ ml: 1 }}>
+                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>İşlemler</TableCell>
+                    </TableRow>
+                  </TableHead>
+                                  <TableBody>
+                    {paginatedCommodities.map((commodity) => (
                     <TableRow key={commodity.id}>
                       <TableCell>{commodity['Commodity code']}</TableCell>
                       <TableCell>{commodity['Product name']}</TableCell>
@@ -1432,11 +1783,11 @@ const AdminPanel = () => {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {commodities.length === 0 && !loading && (
+                  {paginatedCommodities.length === 0 && !loading && (
                     <TableRow>
                       <TableCell colSpan={7} align="center">
                         <Typography color="textSecondary">
-                          Henüz ürün bulunmuyor
+                          {commodities.length === 0 ? 'Henüz ürün bulunmuyor' : 'Filtre kriterlerine uygun ürün bulunamadı'}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -1444,6 +1795,19 @@ const AdminPanel = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+            
+            {/* Commodity Sayfalama */}
+            <TablePagination
+              component="div"
+              count={filteredCommodities.length}
+              page={commodityPage}
+              onPageChange={handleCommodityChangePage}
+              rowsPerPage={commodityRowsPerPage}
+              onRowsPerPageChange={handleCommodityChangeRowsPerPage}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              labelRowsPerPage="Sayfa başına ürün:"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
+            />
           </Box>
         )}
       </Paper>

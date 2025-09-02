@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Container,
   Typography,
@@ -124,16 +124,10 @@ const NewFridgeReport = () => {
     { id: 6, text: 'Ekran ve buton kontrolü', completed: false, completedAt: null }
   ]);
 
-  // 58 slotluk otomat içeriği
-  const [slots, setSlots] = useState(
-    Array.from({ length: 58 }, (_, i) => ({
-      id: i + 1,
-      commodity: '',
-      quantity: '',
-      expiryDate: '',
-      batchNumber: ''
-    }))
-  );
+  // Manuel slot ekleme sistemi
+  const [slots, setSlots] = useState([]);
+  const [newSlotNumber, setNewSlotNumber] = useState('');
+  const [commoditySearch, setCommoditySearch] = useState('');
 
   // Fotoğraf state'leri
   const [beforePhotos, setBeforePhotos] = useState([]);
@@ -149,6 +143,56 @@ const NewFridgeReport = () => {
       isMounted.current = false;
     };
   }, []);
+
+  // Slot verilerini güncelle
+  const updateSlot = (slotId, field, value) => {
+    setSlots(prev => prev.map(slot => 
+      slot.id === slotId ? { ...slot, [field]: value } : slot
+    ));
+  };
+
+  // Ürün seçimi için yardımcı fonksiyon
+  const handleCommoditySelect = (slotId, displayText) => {
+    // Display text'i direkt olarak kaydet
+    updateSlot(slotId, 'commodity', displayText);
+  };
+
+  // Yeni slot ekle
+  const addSlot = () => {
+    if (!newSlotNumber.trim()) {
+      setError('Slot numarası gerekli!');
+      return;
+    }
+    
+    const slotNum = parseInt(newSlotNumber);
+    if (isNaN(slotNum) || slotNum < 1 || slotNum > 58) {
+      setError('Slot numarası 1-58 arasında olmalı!');
+      return;
+    }
+    
+    // Aynı slot numarası var mı kontrol et
+    if (slots.some(slot => slot.id === slotNum)) {
+      setError('Bu slot numarası zaten eklenmiş!');
+      return;
+    }
+    
+    const newSlot = {
+      id: slotNum,
+      commodity: '',
+      quantity: '',
+      expiryDate: '',
+      batchNumber: ''
+    };
+    
+    setSlots(prev => [...prev, newSlot].sort((a, b) => a.id - b.id));
+    setNewSlotNumber('');
+    setError('');
+  };
+
+  // Slot sil
+  const removeSlot = (slotId) => {
+    setSlots(prev => prev.filter(slot => slot.id !== slotId));
+  };
 
   // useEffect dependency'lerini düzelt
   useEffect(() => {
@@ -172,84 +216,81 @@ const NewFridgeReport = () => {
     };
   }, [beforePhotos, afterPhotos, issuePhotos]);
 
-  // Commodity list'i yükle
+    // Commodity list'i yükle - Optimized
   useEffect(() => {
+    let isMounted = true;
+    
     const loadCommodities = async () => {
       try {
         const result = await commodityService.getAllCommodities();
+        if (!isMounted) return;
+        
         if (result.success && result.commodities && result.commodities.length > 0) {
           const commodities = result.commodities || [];
-          // Ürün adlarını listeye çevir
-          const commodityNames = commodities.map(commodity => commodity['Product name']).filter(Boolean);
-          setCommodityList(commodityNames);
+          
+          // Ürün adlarını ve kodlarını birlikte kullanarak benzersiz liste oluştur
+          const uniqueCommodities = [];
+          const seenNames = new Set();
+          
+          // Performans için for...of kullan
+          for (const commodity of commodities) {
+            const productName = commodity['Product name'];
+            const productCode = commodity['Commodity code'];
+            
+            if (productName && !seenNames.has(productName)) {
+              seenNames.add(productName);
+              uniqueCommodities.push({
+                name: productName,
+                code: productCode,
+                displayText: `${productName} (${productCode})`
+              });
+            }
+          }
+          
+          if (isMounted) {
+            console.log('Yüklenen ürün sayısı:', commodities.length);
+            console.log('Benzersiz ürün sayısı:', uniqueCommodities.length);
+            console.log('Tekrarlanan ürünler:', commodities.length - uniqueCommodities.length);
+            
+            setCommodityList(uniqueCommodities.map(item => item.displayText));
+          }
         } else {
-          // Firebase'den veri gelmezse varsayılan listeyi kullan
-          console.log('Firebase\'den ürün listesi alınamadı, varsayılan liste kullanılıyor');
-          setCommodityList([
-            "Çikolata",
-            "Bisküvi",
-            "Gazlı İçecek",
-            "Meyve Suyu",
-            "Su",
-            "Kola",
-            "Fıstık",
-            "Cips",
-            "Kraker",
-            "Sakız",
-            "Makarna",
-            "Kahve",
-            "Çay",
-            "Enerji İçeceği",
-            "Soda",
-            "Limonata",
-            "Ayran",
-            "Yoğurt İçecek",
-            "Smoothie",
-            "Kuruyemiş",
-            "Kek",
-            "Pasta",
-            "Sandviç",
-            "Poğaça",
-            "Börek",
-            "Makine Dolum Ürünü"
-          ]);
+          if (isMounted) {
+            console.warn('Firebase\'den ürün listesi alınamadı');
+            setCommodityList([]);
+          }
         }
       } catch (error) {
-        console.error('Ürün listesi yüklenemedi:', error);
-        // Fallback: varsayılan liste
-        setCommodityList([
-          "Çikolata",
-          "Bisküvi",
-          "Gazlı İçecek",
-          "Meyve Suyu",
-          "Su",
-          "Kola",
-          "Fıstık",
-          "Cips",
-          "Kraker",
-          "Sakız",
-          "Makarna",
-          "Kahve",
-          "Çay",
-          "Enerji İçeceği",
-          "Soda",
-          "Limonata",
-          "Ayran",
-          "Yoğurt İçecek",
-          "Smoothie",
-          "Kuruyemiş",
-          "Kek",
-          "Pasta",
-          "Sandviç",
-          "Poğaça",
-          "Börek",
-          "Makine Dolum Ürünü"
-        ]);
+        if (isMounted) {
+          console.error('Ürün listesi yüklenemedi:', error);
+          setCommodityList([]);
+        }
       }
     };
 
     loadCommodities();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  // Commodity listesini memoize et - Optimized with search
+  const memoizedCommodityList = useMemo(() => {
+    if (!commodityList || commodityList.length === 0) return [];
+    
+    let filteredList = commodityList;
+    
+    // Arama filtresi uygula
+    if (commoditySearch.trim()) {
+      filteredList = commodityList.filter(item => 
+        item.toLowerCase().includes(commoditySearch.toLowerCase())
+      );
+    }
+    
+    // Sadece ilk 50 ürünü göster (performans için)
+    return filteredList.slice(0, 50);
+  }, [commodityList, commoditySearch]);
 
   // userData yüklenene kadar bekle
   if (authLoading || !userData) {
@@ -293,17 +334,21 @@ const NewFridgeReport = () => {
     ));
   };
 
-  // Slot verilerini güncelle
-  const updateSlot = (slotId, field, value) => {
-    setSlots(prev => prev.map(slot => 
-      slot.id === slotId ? { ...slot, [field]: value } : slot
-    ));
-  };
 
-  // Fotoğraf ekle
+
+  // Fotoğraf ekle - Optimized
   const handlePhotoAdd = async (files, type) => {
     try {
       setLoading(true);
+      
+      // Dosya boyutu kontrolü (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      const oversizedFiles = Array.from(files).filter(file => file.size > maxSize);
+      
+      if (oversizedFiles.length > 0) {
+        setError('Bazı dosyalar çok büyük. Maksimum dosya boyutu 5MB olmalıdır.');
+        return;
+      }
       
       // Dosyaları base64 olarak kaydet
       const uploadResult = await photoService.saveMultiplePhotoUrls(files, type);
@@ -378,14 +423,22 @@ const NewFridgeReport = () => {
   // Rapor gönder
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    console.log('Form submit başladı');
+    console.log('User data:', userData);
+    console.log('Form data:', formData);
+    console.log('Before photos:', beforePhotos.length);
+    console.log('After photos:', afterPhotos.length);
 
     // userData kontrolü
     if (!userData || !userData.uid) {
+      console.error('User data eksik:', userData);
       safeSetState(setError, 'Kullanıcı bilgileri yüklenemedi. Lütfen tekrar giriş yapın.');
       return;
     }
 
     if (!formData.location.trim() || !formData.machineSerialNumber.trim()) {
+      console.error('Form alanları eksik:', formData);
       safeSetState(setError, 'Lütfen lokasyon ve makine seri numarası alanlarını doldurun');
       return;
     }
@@ -393,21 +446,25 @@ const NewFridgeReport = () => {
     // Makine seri numarası formatını kontrol et (10 haneli sayı)
     const serialNumberRegex = /^\d{10}$/;
     if (!serialNumberRegex.test(formData.machineSerialNumber.trim())) {
+      console.error('Seri numara formatı hatalı:', formData.machineSerialNumber);
       safeSetState(setError, 'Makine seri numarası 10 haneli sayı olmalıdır (Örn: 2403290003)');
       return;
     }
 
     // Fotoğraf zorunluluğu kontrolü
     if (beforePhotos.length === 0) {
+      console.error('Öncesi fotoğraf eksik');
       safeSetState(setError, 'En az bir "Öncesi" fotoğraf eklemek zorunludur!');
       return;
     }
 
     if (afterPhotos.length === 0) {
+      console.error('Sonrası fotoğraf eksik');
       safeSetState(setError, 'En az bir "Sonrası" fotoğraf eklemek zorunludur!');
       return;
     }
 
+    console.log('Validation geçti, rapor oluşturma başlıyor...');
     safeSetState(setLoading, true);
     safeSetState(setError, '');
     safeSetState(setSuccess, '');
@@ -438,7 +495,10 @@ const NewFridgeReport = () => {
           completed: item.completed, 
           completedAt: item.completedAt
         })),
-        slots: slots.filter(slot => slot.commodity || slot.quantity || slot.expiryDate || slot.batchNumber),
+        slots: slots.filter(slot => slot.commodity || slot.quantity || slot.expiryDate || slot.batchNumber).map(slot => ({
+          ...slot,
+          commodity: slot.commodity ? slot.commodity.split(' (')[0] : '' // Sadece ürün adını al
+        })),
         beforePhotos: photoUploads.filter(p => p.type === 'before').map(p => p.url),
         afterPhotos: photoUploads.filter(p => p.type === 'after').map(p => p.url),
         issuePhotos: photoUploads.filter(p => p.type === 'issue').map(p => p.url),
@@ -446,14 +506,17 @@ const NewFridgeReport = () => {
         title: generateReportTitle(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        userId: userData.uid, // Kullanıcı ID'sini otomatik ekle
-        userName: userData.name, // Kullanıcı adını da ekle
-        reportType: 'fridge' // Rapor türünü belirt
+        userId: userData.uid,
+        userName: userData.name,
+        reportType: 'fridge'
       };
 
+      console.log('Rapor verisi:', reportData); // Debug için
       const result = await reportService.createReport(reportData);
+      console.log('Rapor oluşturma sonucu:', result); // Debug için
 
       if (result.success) {
+        console.log('Rapor başarıyla oluşturuldu:', result);
         safeSetState(setSuccess, "Rapor başarıyla oluşturuldu! Dashboard'a yönlendiriliyorsunuz...");
         
         // Countdown başlat
@@ -476,13 +539,17 @@ const NewFridgeReport = () => {
           }
         }, 1000);
       } else {
+        console.error('Rapor oluşturma başarısız:', result);
         throw new Error(result.error || 'Rapor oluşturulamadı');
       }
 
     } catch (error) {
+      console.error('Rapor oluşturma hatası:', error);
+      console.error('Error stack:', error.stack);
       safeSetState(setError, `Rapor gönderilemedi: ${error.message}`);
     } finally {
-        safeSetState(setLoading, false);
+      console.log('Form submit işlemi tamamlandı');
+      safeSetState(setLoading, false);
     }
   };
 
@@ -569,64 +636,132 @@ const NewFridgeReport = () => {
               ))}
             </Grid>
 
-            {/* 58 Slotluk Otomat İçeriği */}
+            {/* Manuel Slot Ekleme Sistemi */}
             <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
-              Otomat İçeriği (58 Slot)
+              Otomat İçeriği (Manuel Slot Ekleme)
             </Typography>
             
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              {slots.map((slot) => (
-                <Grid item xs={12} sm={6} md={4} key={slot.id}>
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Slot {slot.id}
-                    </Typography>
-                    <FormControl fullWidth sx={{ mb: 1 }}>
-                      <InputLabel>Ürün</InputLabel>
-                      <Select
-                        value={slot.commodity}
-                        label="Ürün"
-                        onChange={(e) => updateSlot(slot.id, 'commodity', e.target.value)}
-                      >
-                        {commodityList.map((commodity) => (
-                          <MenuItem key={commodity} value={commodity}>
-                            {commodity}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      label="Miktar"
-                      type="number"
-                      value={slot.quantity}
-                      onChange={(e) => updateSlot(slot.id, 'quantity', e.target.value)}
-                      sx={{ mb: 1 }}
-                    />
-                    <TextField
-                      fullWidth
-                      size="small"
-                      label="Son Kullanma Tarihi"
-                      type="date"
-                      value={slot.expiryDate}
-                      onChange={(e) => updateSlot(slot.id, 'expiryDate', e.target.value)}
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      sx={{ mb: 1 }}
-                    />
-                    <TextField
-                      fullWidth
-                      size="small"
-                      label="Parti Numarası"
-                      value={slot.batchNumber}
-                      onChange={(e) => updateSlot(slot.id, 'batchNumber', e.target.value)}
-                    />
-                  </Paper>
+            {/* Slot Ekleme Kontrolü */}
+            <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Yeni Slot Ekle
+              </Typography>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Slot Numarası (1-58)"
+                    type="number"
+                    value={newSlotNumber}
+                    onChange={(e) => setNewSlotNumber(e.target.value)}
+                    inputProps={{ min: 1, max: 58 }}
+                  />
                 </Grid>
-              ))}
-            </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Button
+                    variant="contained"
+                    onClick={addSlot}
+                    disabled={!newSlotNumber.trim()}
+                    startIcon={<Add />}
+                  >
+                    Slot Ekle
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="body2" color="textSecondary">
+                    Eklenen Slot: {slots.length} / 58
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Paper>
+            
+            {/* Slot Listesi */}
+            {slots.length === 0 ? (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                Henüz slot eklenmemiş. Yukarıdan slot numarası girerek slot ekleyebilirsiniz.
+              </Alert>
+            ) : (
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                {slots.map((slot) => (
+                  <Grid item xs={12} sm={6} md={4} key={slot.id}>
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle2">
+                          Slot {slot.id}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => removeSlot(slot.id)}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Box>
+                      <FormControl fullWidth sx={{ mb: 1 }}>
+                        <InputLabel>Ürün</InputLabel>
+                        <Select
+                          value={slot.commodity || ''}
+                          label="Ürün"
+                          onChange={(e) => handleCommoditySelect(slot.id, e.target.value)}
+                          MenuProps={{
+                            PaperProps: {
+                              style: {
+                                maxHeight: 300
+                              }
+                            }
+                          }}
+                        >
+                          {/* Arama alanı */}
+                          <Box sx={{ p: 1 }}>
+                            <TextField
+                              size="small"
+                              placeholder="Ürün ara..."
+                              value={commoditySearch}
+                              onChange={(e) => setCommoditySearch(e.target.value)}
+                              fullWidth
+                              sx={{ mb: 1 }}
+                            />
+                          </Box>
+                          {memoizedCommodityList.map((commodity, index) => (
+                            <MenuItem key={`commodity-${commodity}-${index}`} value={commodity}>
+                              {commodity}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Miktar"
+                        type="number"
+                        value={slot.quantity}
+                        onChange={(e) => updateSlot(slot.id, 'quantity', e.target.value)}
+                        sx={{ mb: 1 }}
+                      />
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Son Kullanma Tarihi"
+                        type="date"
+                        value={slot.expiryDate}
+                        onChange={(e) => updateSlot(slot.id, 'expiryDate', e.target.value)}
+                        InputLabelProps={{
+                          shrink: true,
+                        }}
+                        sx={{ mb: 1 }}
+                      />
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Parti Numarası"
+                        value={slot.batchNumber}
+                        onChange={(e) => updateSlot(slot.id, 'batchNumber', e.target.value)}
+                      />
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
 
             {/* Fotoğraflar */}
             <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
@@ -770,17 +905,17 @@ const NewFridgeReport = () => {
 
             {/* Submit Button */}
             <Box sx={{ mt: 4, textAlign: 'center' }}>
-        <Button
+              <Button
                 type="submit"
-          variant="contained"
-          size="large"
+                variant="contained"
+                size="large"
                 disabled={loading}
                 startIcon={loading ? <CircularProgress size={20} /> : <CloudUpload />}
                 sx={{ minWidth: 200 }}
-        >
+              >
                 {loading ? 'Gönderiliyor...' : 'Raporu Gönder'}
-        </Button>
-      </Box>
+              </Button>
+            </Box>
           </Box>
           </Paper>
     </Container>
