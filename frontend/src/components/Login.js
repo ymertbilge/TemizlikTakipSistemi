@@ -120,7 +120,7 @@ const Login = () => {
             Doğuş Otomat
           </Typography>
           <Typography component="h2" variant="h6" align="center" color="textSecondary" gutterBottom>
-            Temizlik Takip Sistemi
+            Temizlik ve Dolum Takip Sistemi
           </Typography>
 
           <Box component="form" onSubmit={handleLogin} sx={{ mt: 1 }}>

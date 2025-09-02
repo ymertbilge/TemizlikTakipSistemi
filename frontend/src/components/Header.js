@@ -39,7 +39,7 @@ const Header = () => {
     <AppBar position="static">
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          Doğuş Otomat Temizlik Takip Sistemi
+          Doğuş Otomat Temizlik ve Dolum Takip Sistemi
         </Typography>
         
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>

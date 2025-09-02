@@ -1,4 +1,4 @@
-# Doğuş Otomat Temizlik Takip Sistemi
+# Doğuş Otomat Temizlik ve Dolum Takip Sistemi
 
 Bu proje, Doğuş Otomat'ın dondurma otomatlarının routeman ekibinin otomat kontrollerini ve temizlik işlemlerini takip etmek için geliştirilmiş bir web uygulamasıdır.
 
@@ -124,7 +124,7 @@ Admin hesabı ile giriş yaptığınızda:
 ## Klasör Yapısı
 
 ```
-Doğuş Otomat Temizlik Takip Sistemi/
+Doğuş Otomat Temizlik ve Dolum Takip Sistemi/
 ├── backend/          # Node.js backend
 │   ├── routes/       # API route'ları
 │   │   ├── auth.js   # Authentication routes
