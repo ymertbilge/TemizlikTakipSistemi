@@ -80,6 +80,18 @@ const Header = () => {
               >
                 Ana Sayfa
               </Button>
+              {userData.role === 'viewer' && (
+                <Button
+                  color="inherit"
+                  startIcon={<AdminPanelSettings />}
+                  onClick={() => navigate('/admin')}
+                  sx={{ 
+                    backgroundColor: location.pathname === '/admin' ? 'rgba(255,255,255,0.1)' : 'transparent' 
+                  }}
+                >
+                  Raporlar (Admin)
+                </Button>
+              )}
             </>
           )}
           

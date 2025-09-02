@@ -7,11 +7,12 @@ import {
 } from '@mui/material';
 import { 
   Visibility, ExpandMore, ExpandLess, CheckCircle,
-  Assignment, Add, Refresh
+  Assignment, Add, Refresh, Download
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { reportService } from '../services/firebaseService';
 import { useNavigate } from 'react-router-dom';
+
 
 const Dashboard = () => {
   const { userData } = useAuth();
@@ -287,6 +288,48 @@ const Dashboard = () => {
     }
   };
 
+  // Raporları dışa aktar
+  const handleExportReports = () => {
+    try {
+      generateCSV(filteredReports);
+      setSuccess('Raporlar başarıyla CSV formatında dışa aktarıldı!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError('Raporlar dışa aktarılamadı: ' + error.message);
+    }
+  };
+
+  const generateCSV = (reports) => {
+    const headers = ['ID', 'Lokasyon', 'Makine Seri No', 'Kullanıcı', 'Tarih', 'Durum', 'Rapor Türü', 'Notlar', 'Arıza', 'Zayi'];
+    const rows = reports.map(report => [
+      report.id,
+      report.location,
+      report.machineSerialNumber,
+      report.userName,
+      report.createdAt ? new Date(report.createdAt).toLocaleDateString('tr-TR') : '',
+      getStatusText(report.status),
+      report.reportType === 'fridge' ? 'Taze Dolap Dolum' : 'Dondurma Temizlik',
+      report.notes || '',
+      report.hasIssue ? report.issueDescription || 'Var' : 'Yok',
+      report.hasWaste ? 'Var' : 'Yok'
+    ]);
+    
+    const csvContent = [headers, ...rows].map(row => 
+      row.map(cell => `"${cell || ''}"`).join(',')
+    ).join('\n');
+    
+    // CSV dosyasını oluştur ve indir
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `raporlar_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading && reports.length === 0) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -362,20 +405,31 @@ const Dashboard = () => {
           </Tabs>
         </Box>
 
-        {/* Aktif Sıralama Bilgisi */}
-        <Alert severity="info" sx={{ mb: 2 }}>
-          <Typography variant="body2">
-            <strong>Sıralama:</strong> {
-              sortConfig.key === 'createdAt' ? 'Tarih' :
-              sortConfig.key === 'location' ? 'Lokasyon' :
-              sortConfig.key === 'machineSerialNumber' ? 'Makine Seri No' :
-              sortConfig.key === 'userName' ? 'Kullanıcı' :
-              sortConfig.key === 'status' ? 'Durum' :
-              sortConfig.key === 'reportType' ? 'Rapor Türü' : 'Bilinmiyor'
-            } ({sortConfig.direction === 'asc' ? 'Artan' : 'Azalan'})
-            {sortConfig.key === 'createdAt' && sortConfig.direction === 'desc' && ' - En güncel raporlar üstte'}
-          </Typography>
-        </Alert>
+        {/* Export Butonu ve Sıralama Bilgisi */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Alert severity="info" sx={{ flex: 1 }}>
+            <Typography variant="body2">
+              <strong>Sıralama:</strong> {
+                sortConfig.key === 'createdAt' ? 'Tarih' :
+                sortConfig.key === 'location' ? 'Lokasyon' :
+                sortConfig.key === 'machineSerialNumber' ? 'Makine Seri No' :
+                sortConfig.key === 'userName' ? 'Kullanıcı' :
+                sortConfig.key === 'status' ? 'Durum' :
+                sortConfig.key === 'reportType' ? 'Rapor Türü' : 'Bilinmiyor'
+              } ({sortConfig.direction === 'asc' ? 'Artan' : 'Azalan'})
+              {sortConfig.key === 'createdAt' && sortConfig.direction === 'desc' && ' - En güncel raporlar üstte'}
+            </Typography>
+          </Alert>
+          
+          <Button
+            variant="contained"
+            onClick={handleExportReports}
+            disabled={filteredReports.length === 0 || loading}
+            startIcon={<Download />}
+          >
+            CSV Olarak Dışa Aktar
+          </Button>
+        </Box>
 
         {filteredReports.length === 0 ? (
           <Alert severity="info">Henüz rapor bulunmuyor.</Alert>

@@ -32,7 +32,6 @@ const AdminPanel = () => {
   const [locationFilter, setLocationFilter] = useState('');
   const [machineSerialFilter, setMachineSerialFilter] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
-  
   // Commodity management states
   const [commoditySearch, setCommoditySearch] = useState('');
   const [commodityFilter, setCommodityFilter] = useState({
@@ -66,7 +65,6 @@ const AdminPanel = () => {
     'Type': '',
     'Description': ''
   });
-  
   // Kullanıcı ekleme formu
   const [newUser, setNewUser] = useState({
     email: '',
@@ -74,7 +72,6 @@ const AdminPanel = () => {
     name: '',
     role: 'viewer'
   });
-
   // Kullanıcı düzenleme formu
   const [editingUser, setEditingUser] = useState(null);
   const [editFormOpen, setEditFormOpen] = useState(false);
@@ -83,11 +80,9 @@ const AdminPanel = () => {
     role: 'viewer',
     isActive: true
   });
-
   // Sayfalama durumu
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
   // Commodity sayfalama durumu
   const [commodityPage, setCommodityPage] = useState(0);
   const [commodityRowsPerPage, setCommodityRowsPerPage] = useState(10);
@@ -137,7 +132,6 @@ const AdminPanel = () => {
   // Raporları filtrele
   useEffect(() => {
     let filtered = reports;
-    
     // Rapor türüne göre filtrele
     switch (reportTypeFilter) {
       case 'iceCream':
@@ -153,7 +147,6 @@ const AdminPanel = () => {
       default:
         filtered = reports;
     }
-    
     // Tarihe göre filtrele
     if (dateFilter.startDate) {
       filtered = filtered.filter(report => {
@@ -162,7 +155,6 @@ const AdminPanel = () => {
         return reportDate >= startDate;
       });
     }
-    
     if (dateFilter.endDate) {
       filtered = filtered.filter(report => {
         const reportDate = new Date(report.createdAt);
@@ -171,25 +163,21 @@ const AdminPanel = () => {
         return reportDate <= endDate;
       });
     }
-
     // Lokasyona göre filtrele
     if (locationFilter.trim()) {
       filtered = filtered.filter(report => 
         report.location && report.location.toLowerCase().includes(locationFilter.toLowerCase())
       );
     }
-    
     // Makine seri numarasına göre filtrele
     if (machineSerialFilter.trim()) {
       filtered = filtered.filter(report => 
         report.machineSerialNumber && report.machineSerialNumber.includes(machineSerialFilter)
       );
     }
-    
     // Sıralama
     filtered.sort((a, b) => {
       let aValue, bValue;
-      
       switch (sortConfig.key) {
         case 'createdAt':
           aValue = new Date(a.createdAt);
@@ -207,7 +195,6 @@ const AdminPanel = () => {
           aValue = a[sortConfig.key];
           bValue = b[sortConfig.key];
       }
-      
       if (aValue < bValue) {
         return sortConfig.direction === 'asc' ? -1 : 1;
       }
@@ -216,7 +203,6 @@ const AdminPanel = () => {
       }
       return 0;
     });
-    
     setFilteredReports(filtered);
   }, [reports, reportTypeFilter, dateFilter, locationFilter, machineSerialFilter, sortConfig]);
 
@@ -256,7 +242,6 @@ const AdminPanel = () => {
   // Commodity filtreleme ve sıralama
   useEffect(() => {
     let filtered = commodities;
-
     // Genel arama
     if (commoditySearch.trim()) {
       const searchTerm = commoditySearch.toLowerCase();
@@ -267,39 +252,33 @@ const AdminPanel = () => {
         (commodity['Type'] && commodity['Type'].toLowerCase().includes(searchTerm))
       );
     }
-
     // Tedarikçi filtresi
     if (commodityFilter.supplier.trim()) {
       filtered = filtered.filter(commodity => 
         commodity['Supplier'] && commodity['Supplier'].toLowerCase().includes(commodityFilter.supplier.toLowerCase())
       );
     }
-
     // Tip filtresi
     if (commodityFilter.type.trim()) {
       filtered = filtered.filter(commodity => 
         commodity['Type'] && commodity['Type'].toLowerCase().includes(commodityFilter.type.toLowerCase())
       );
     }
-
     // Ürün adı filtresi
     if (commodityFilter.productName.trim()) {
       filtered = filtered.filter(commodity => 
         commodity['Product name'] && commodity['Product name'].toLowerCase().includes(commodityFilter.productName.toLowerCase())
       );
     }
-
     // Ürün kodu filtresi
     if (commodityFilter.commodityCode.trim()) {
       filtered = filtered.filter(commodity => 
         commodity['Commodity code'] && commodity['Commodity code'].toLowerCase().includes(commodityFilter.commodityCode.toLowerCase())
       );
     }
-
     // Sıralama
     filtered.sort((a, b) => {
       let aValue, bValue;
-      
       switch (commoditySortConfig.key) {
         case 'Product name':
           aValue = (a['Product name'] || '').toLowerCase();
@@ -329,7 +308,6 @@ const AdminPanel = () => {
           aValue = a[commoditySortConfig.key];
           bValue = b[commoditySortConfig.key];
       }
-      
       if (aValue < bValue) {
         return commoditySortConfig.direction === 'asc' ? -1 : 1;
       }
@@ -338,7 +316,6 @@ const AdminPanel = () => {
       }
       return 0;
     });
-
     setFilteredCommodities(filtered);
     setCommodityPage(0); // Filtre değiştiğinde sayfa numarasını sıfırla
   }, [commodities, commoditySearch, commodityFilter, commoditySortConfig]);
@@ -360,18 +337,15 @@ const AdminPanel = () => {
     setLoading(true);
     setError('');
     setSuccess('');
-
     try {
       if (!newUser.email || !newUser.password || !newUser.name) {
         setError('Lütfen tüm alanları doldurun.');
         return;
       }
-
       if (newUser.password.length < 6) {
         setError('Şifre en az 6 karakter olmalıdır.');
         return;
       }
-
       const result = await authService.createUser(
         newUser.email,
         newUser.password,
@@ -381,7 +355,6 @@ const AdminPanel = () => {
           role: newUser.role
         }
       );
-
       if (result.success) {
         setNewUser({
           email: '',
@@ -408,7 +381,6 @@ const AdminPanel = () => {
       const result = await userService.updateUser(userId, {
         isActive: !currentStatus
       });
-      
       if (result.success) {
         fetchUsers();
         setSuccess('Kullanıcı durumu güncellendi!');
@@ -444,7 +416,6 @@ const AdminPanel = () => {
         isActive: editFormData.isActive,
         updatedAt: new Date().toISOString()
       });
-      
       if (result.success) {
         fetchUsers();
         setSuccess('Kullanıcı başarıyla güncellendi!');
@@ -478,15 +449,12 @@ const AdminPanel = () => {
     setLoading(true);
     setError('');
     setSuccess('');
-
     try {
       if (!newCommodity['Commodity code'] || !newCommodity['Product name']) {
         setError('Lütfen ürün kodu ve ürün adı alanlarını doldurun.');
         return;
       }
-
       const result = await commodityService.createCommodity(newCommodity);
-
       if (result.success) {
         setNewCommodity({
           'Commodity code': '',
@@ -511,6 +479,21 @@ const AdminPanel = () => {
     }
   };
 
+  const handleAddCommodity = () => {
+    setNewCommodity({
+      'Commodity code': '',
+      'Product name': '',
+      'Unit price': '',
+      'Cost price': '',
+      'Supplier': '',
+      'Specs': '',
+      'Type': '',
+      'Description': ''
+    });
+    setCommodityEditFormOpen(true);
+    setEditingCommodity(null);
+  };
+
   const handleEditCommodity = (commodity) => {
     setEditingCommodity(commodity);
     setCommodityEditFormData({
@@ -529,14 +512,17 @@ const AdminPanel = () => {
   const handleSaveCommodityEdit = async () => {
     try {
       setLoading(true);
-      const result = await commodityService.updateCommodity(editingCommodity.id, {
+      const updateData = {
         ...commodityEditFormData,
         updatedAt: new Date().toISOString()
-      });
-      
+      };
+      const result = editingCommodity
+        ? await commodityService.updateCommodity(editingCommodity.id, updateData)
+        : await commodityService.createCommodity(updateData);
+
       if (result.success) {
         fetchCommodities();
-        setSuccess('Ürün başarıyla güncellendi!');
+        setSuccess(editingCommodity ? 'Ürün başarıyla güncellendi!' : 'Ürün başarıyla oluşturuldu!');
         setTimeout(() => setSuccess(''), 3000);
         setCommodityEditFormOpen(false);
         setEditingCommodity(null);
@@ -544,7 +530,7 @@ const AdminPanel = () => {
         setError(result.error);
       }
     } catch (error) {
-      setError('Ürün güncellenemedi.');
+      setError('Ürün işlemi başarısız oldu.');
     } finally {
       setLoading(false);
     }
@@ -569,7 +555,6 @@ const AdminPanel = () => {
     try {
       setLoading(true);
       const result = await commodityService.deleteCommodity(commodityId);
-      
       if (result.success) {
         setSuccess('Ürün başarıyla silindi!');
         fetchCommodities();
@@ -587,17 +572,13 @@ const AdminPanel = () => {
   const handleImportCommodities = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
     try {
       setLoading(true);
       setError('');
       setSuccess('');
-
       const text = await file.text();
       const jsonData = JSON.parse(text);
-      
       const result = await importCommoditiesFromJSON(jsonData);
-      
       if (result.success) {
         setSuccess(`${result.successCount} ürün başarıyla içe aktarıldı! ${result.errorCount} hatalı kayıt.`);
         fetchCommodities();
@@ -618,7 +599,6 @@ const AdminPanel = () => {
     try {
       setLoading(true);
       const result = await reportService.deleteReport(reportId);
-      
       if (result.success) {
         setSuccess('Rapor başarıyla silindi!');
         fetchReports();
@@ -642,18 +622,8 @@ const AdminPanel = () => {
 
   const handleExportReports = () => {
     try {
-      const csvContent = generateCSV(filteredReports);
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `raporlar_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setSuccess('Raporlar başarıyla dışa aktarıldı!');
+      generateCSV(filteredReports);
+      setSuccess('Raporlar başarıyla CSV formatında dışa aktarıldı!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       setError('Raporlar dışa aktarılamadı: ' + error.message);
@@ -661,21 +631,32 @@ const AdminPanel = () => {
   };
 
   const generateCSV = (reports) => {
-    const headers = ['ID', 'Lokasyon', 'Makine Seri No', 'Kullanıcı', 'Tarih', 'Durum', 'Rapor Türü', 'Notlar'];
+    const headers = ['ID', 'Lokasyon', 'Makine Seri No', 'Kullanıcı', 'Tarih', 'Durum', 'Rapor Türü', 'Notlar', 'Arıza', 'Zayi'];
     const rows = reports.map(report => [
       report.id,
       report.location,
       report.machineSerialNumber,
       report.userName,
       report.createdAt ? new Date(report.createdAt).toLocaleDateString('tr-TR') : '',
-      report.status,
+      getStatusText(report.status),
       report.reportType === 'fridge' ? 'Taze Dolap Dolum' : 'Dondurma Temizlik',
-      report.notes
+      report.notes || '',
+      report.hasIssue ? report.issueDescription || 'Var' : 'Yok',
+      report.hasWaste ? 'Var' : 'Yok'
     ]);
-    
-    return [headers, ...rows].map(row => 
+    const csvContent = [headers, ...rows].map(row => 
       row.map(cell => `"${cell || ''}"`).join(',')
     ).join('\n');
+    // CSV dosyasını oluştur ve indir
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `raporlar_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleViewReport = (report) => {
@@ -692,7 +673,6 @@ const AdminPanel = () => {
         issueResolvedDate: resolved ? new Date().toISOString() : '',
         updatedAt: new Date().toISOString()
       });
-      
       if (result.success) {
         fetchReports(); // Raporları yenile
         setSuccess('Arıza durumu güncellendi!');
@@ -835,7 +815,6 @@ const AdminPanel = () => {
           Kullanıcı yönetimi ve sistem kontrolü
         </Typography>
       </Box>
-
       {/* Global Alert Messages */}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -847,15 +826,17 @@ const AdminPanel = () => {
           {success}
         </Alert>
       )}
-
+      
       <Paper sx={{ width: '100%' }}>
-        <Tabs value={activeTab} onChange={handleTabChange}>
+        {/* Tabs */}
+        <Tabs value={activeTab} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tab label="Raporlar" />
           <Tab label="Kullanıcı Ekle" />
           <Tab label="Kullanıcı Listesi" />
           <Tab label="Ürün Yönetimi" />
         </Tabs>
 
+        {/* Tab 0: Raporlar */}
         {activeTab === 0 && (
           <Box sx={{ p: 3 }}>
             <Box sx={{ mb: 3 }}>
@@ -871,7 +852,6 @@ const AdminPanel = () => {
                   Tüm Filtreleri Temizle
                 </Button>
               </Box>
-              
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={2}>
                   <FormControl fullWidth>
@@ -935,7 +915,6 @@ const AdminPanel = () => {
                 </Grid>
               </Grid>
             </Box>
-
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
               <Button
                 variant="contained"
@@ -946,7 +925,6 @@ const AdminPanel = () => {
                 CSV Olarak Dışa Aktar
               </Button>
             </Box>
-
             {/* Aktif Filtreler Bilgisi */}
             {(dateFilter.startDate || dateFilter.endDate || locationFilter || machineSerialFilter || reportTypeFilter !== 'all') && (
               <Alert severity="info" sx={{ mb: 2 }}>
@@ -963,7 +941,6 @@ const AdminPanel = () => {
                 </Typography>
               </Alert>
             )}
-
             {filteredReports.length === 0 ? (
               <Alert severity="info">Henüz rapor bulunmuyor.</Alert>
             ) : (
@@ -1174,7 +1151,6 @@ const AdminPanel = () => {
                                         </CardContent>
                                       </Card>
                                     </Grid>
-
                                     {/* Checklist Özeti veya Slot Bilgisi */}
                                     <Grid item xs={12} md={6}>
                                       {report.reportType === 'fridge' ? (
@@ -1222,7 +1198,6 @@ const AdminPanel = () => {
                                         </Card>
                                       )}
                                     </Grid>
-
                                     {/* Fotoğraflar */}
                                     <Grid item xs={12}>
                                       <Card variant="outlined">
@@ -1252,7 +1227,6 @@ const AdminPanel = () => {
                                                 </Grid>
                                               </Grid>
                                             )}
-
                                             {/* Sonrası Fotoğraflar */}
                                             {report.afterPhotos && report.afterPhotos.length > 0 && (
                                               <Grid item xs={12} md={4}>
@@ -1274,7 +1248,6 @@ const AdminPanel = () => {
                                                 </Grid>
                                               </Grid>
                                             )}
-
                                             {/* Arıza Fotoğrafları */}
                                             {report.issuePhotos && report.issuePhotos.length > 0 && (
                                               <Grid item xs={12} md={4}>
@@ -1296,7 +1269,6 @@ const AdminPanel = () => {
                                                 </Grid>
                                               </Grid>
                                             )}
-
                                             {(!report.beforePhotos || report.beforePhotos.length === 0) &&
                                              (!report.afterPhotos || report.afterPhotos.length === 0) &&
                                              (!report.issuePhotos || report.issuePhotos.length === 0) && (
@@ -1318,7 +1290,6 @@ const AdminPanel = () => {
                     </TableBody>
                   </Table>
                 </TableContainer>
-                
                 {/* Sayfalama */}
                 <TablePagination
                   component="div"
@@ -1336,12 +1307,12 @@ const AdminPanel = () => {
           </Box>
         )}
 
+        {/* Tab 1: Kullanıcı Ekle */}
         {activeTab === 1 && (
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Yeni Kullanıcı Ekle
             </Typography>
-
             <Box component="form" onSubmit={handleCreateUser} sx={{ maxWidth: 500 }}>
               <TextField
                 margin="normal"
@@ -1354,7 +1325,6 @@ const AdminPanel = () => {
                 disabled={loading}
                 helperText="Geçerli bir email adresi girin"
               />
-
               <TextField
                 margin="normal"
                 required
@@ -1366,7 +1336,6 @@ const AdminPanel = () => {
                 disabled={loading}
                 helperText="En az 6 karakter olmalıdır"
               />
-
               <TextField
                 margin="normal"
                 required
@@ -1377,7 +1346,6 @@ const AdminPanel = () => {
                 sx={{ mb: 2 }}
                 helperText="Kullanıcının tam adını girin"
               />
-
               <FormControl fullWidth margin="normal">
                 <InputLabel>Rol</InputLabel>
                 <Select
@@ -1391,7 +1359,6 @@ const AdminPanel = () => {
                   <MenuItem value="admin">Admin</MenuItem>
                 </Select>
               </FormControl>
-
               <Button
                 type="submit"
                 fullWidth
@@ -1412,18 +1379,17 @@ const AdminPanel = () => {
           </Box>
         )}
 
+        {/* Tab 2: Kullanıcı Listesi */}
         {activeTab === 2 && (
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Kullanıcı Listesi ({users.length})
             </Typography>
-
             {loading && (
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                 <CircularProgress />
               </Box>
             )}
-
             <TableContainer>
               <Table>
                 <TableHead>
@@ -1516,6 +1482,7 @@ const AdminPanel = () => {
           </Box>
         )}
 
+        {/* Tab 3: Ürün Yönetimi */}
         {activeTab === 3 && (
           <Box sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -1549,7 +1516,6 @@ const AdminPanel = () => {
                 </label>
               </Box>
             </Box>
-
             {/* Ürün Arama ve Filtreleme */}
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
@@ -1604,7 +1570,6 @@ const AdminPanel = () => {
                 </Grid>
               </Grid>
             </Paper>
-
             {/* Aktif Ürün Filtreleri Bilgisi */}
             {(commoditySearch || commodityFilter.supplier || commodityFilter.type || commodityFilter.productName || commodityFilter.commodityCode) && (
               <Alert severity="info" sx={{ mb: 2 }}>
@@ -1625,7 +1590,6 @@ const AdminPanel = () => {
                 </Typography>
               </Alert>
             )}
-
             {/* Yeni Ürün Ekleme Formu */}
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
@@ -1722,125 +1686,123 @@ const AdminPanel = () => {
                 </Grid>
               </Box>
             </Paper>
-
             {/* Ürün Listesi */}
             {loading && (
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                 <CircularProgress />
               </Box>
             )}
-
             <TableContainer>
               <Table>
-                                  <TableHead>
-                    <TableRow>
-                      <TableCell 
-                        onClick={() => handleCommoditySort('Commodity code')}
-                        sx={{ 
-                          cursor: 'pointer', 
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                          userSelect: 'none'
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          Ürün Kodu
-                          {commoditySortConfig.key === 'Commodity code' && (
-                            <Box component="span" sx={{ ml: 1 }}>
-                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell 
-                        onClick={() => handleCommoditySort('Product name')}
-                        sx={{ 
-                          cursor: 'pointer', 
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                          userSelect: 'none'
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          Ürün Adı
-                          {commoditySortConfig.key === 'Product name' && (
-                            <Box component="span" sx={{ ml: 1 }}>
-                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell 
-                        onClick={() => handleCommoditySort('Unit price')}
-                        sx={{ 
-                          cursor: 'pointer', 
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                          userSelect: 'none'
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          Birim Fiyat
-                          {commoditySortConfig.key === 'Unit price' && (
-                            <Box component="span" sx={{ ml: 1 }}>
-                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell 
-                        onClick={() => handleCommoditySort('Cost price')}
-                        sx={{ 
-                          cursor: 'pointer', 
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                          userSelect: 'none'
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          Maliyet Fiyatı
-                          {commoditySortConfig.key === 'Cost price' && (
-                            <Box component="span" sx={{ ml: 1 }}>
-                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell 
-                        onClick={() => handleCommoditySort('Supplier')}
-                        sx={{ 
-                          cursor: 'pointer', 
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                          userSelect: 'none'
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          Tedarikçi
-                          {commoditySortConfig.key === 'Supplier' && (
-                            <Box component="span" sx={{ ml: 1 }}>
-                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell 
-                        onClick={() => handleCommoditySort('Type')}
-                        sx={{ 
-                          cursor: 'pointer', 
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                          userSelect: 'none'
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          Tip
-                          {commoditySortConfig.key === 'Type' && (
-                            <Box component="span" sx={{ ml: 1 }}>
-                              {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>İşlemler</TableCell>
-                    </TableRow>
-                  </TableHead>
-                                  <TableBody>
-                    {paginatedCommodities.map((commodity) => (
+                <TableHead>
+                  <TableRow>
+                    <TableCell 
+                      onClick={() => handleCommoditySort('Commodity code')}
+                      sx={{ 
+                        cursor: 'pointer', 
+                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                        userSelect: 'none'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Ürün Kodu
+                        {commoditySortConfig.key === 'Commodity code' && (
+                          <Box component="span" sx={{ ml: 1 }}>
+                            {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                          </Box>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleCommoditySort('Product name')}
+                      sx={{ 
+                        cursor: 'pointer', 
+                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                        userSelect: 'none'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Ürün Adı
+                        {commoditySortConfig.key === 'Product name' && (
+                          <Box component="span" sx={{ ml: 1 }}>
+                            {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                          </Box>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleCommoditySort('Unit price')}
+                      sx={{ 
+                        cursor: 'pointer', 
+                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                        userSelect: 'none'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Birim Fiyat
+                        {commoditySortConfig.key === 'Unit price' && (
+                          <Box component="span" sx={{ ml: 1 }}>
+                            {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                          </Box>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleCommoditySort('Cost price')}
+                      sx={{ 
+                        cursor: 'pointer', 
+                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                        userSelect: 'none'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Maliyet Fiyatı
+                        {commoditySortConfig.key === 'Cost price' && (
+                          <Box component="span" sx={{ ml: 1 }}>
+                            {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                          </Box>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleCommoditySort('Supplier')}
+                      sx={{ 
+                        cursor: 'pointer', 
+                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                        userSelect: 'none'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Tedarikçi
+                        {commoditySortConfig.key === 'Supplier' && (
+                          <Box component="span" sx={{ ml: 1 }}>
+                            {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                          </Box>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      onClick={() => handleCommoditySort('Type')}
+                      sx={{ 
+                        cursor: 'pointer', 
+                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                        userSelect: 'none'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Tip
+                        {commoditySortConfig.key === 'Type' && (
+                          <Box component="span" sx={{ ml: 1 }}>
+                            {commoditySortConfig.direction === 'asc' ? '↑' : '↓'}
+                          </Box>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell>İşlemler</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paginatedCommodities.map((commodity) => (
                     <TableRow key={commodity.id}>
                       <TableCell>{commodity['Commodity code']}</TableCell>
                       <TableCell>{commodity['Product name']}</TableCell>
@@ -1885,7 +1847,6 @@ const AdminPanel = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            
             {/* Commodity Sayfalama */}
             <TablePagination
               component="div"
@@ -1948,7 +1909,6 @@ const AdminPanel = () => {
                     </ListItem>
                   </List>
                 </Grid>
-
                 {/* Checklist Detayları veya Slot Bilgisi */}
                 <Grid item xs={12} md={6}>
                   {selectedReport.reportType === 'fridge' ? (
@@ -1992,7 +1952,6 @@ const AdminPanel = () => {
                       <Typography variant="h6" gutterBottom>
                         Checklist Detayları
                       </Typography>
-                      
                       {/* Ekipman Checklist */}
                       <Typography variant="subtitle2" gutterBottom>
                         Ekipman Kontrolü
@@ -2012,9 +1971,7 @@ const AdminPanel = () => {
                           </ListItem>
                         ))}
                       </List>
-
                       <Divider sx={{ my: 2 }} />
-
                       {/* Temizlik Checklist */}
                       <Typography variant="subtitle2" gutterBottom>
                         Temizlik Kontrolü
@@ -2034,7 +1991,6 @@ const AdminPanel = () => {
                           </ListItem>
                         ))}
                       </List>
-
                       {/* Yeni alanlar */}
                       {(selectedReport.cupStock !== undefined || 
                         selectedReport.stockInfo !== undefined) && (
@@ -2058,7 +2014,6 @@ const AdminPanel = () => {
                     </>
                   )}
                 </Grid>
-
                 {/* Dolum Detayları veya Slot Detayları */}
                 <Grid item xs={12}>
                   <Typography variant="h6" gutterBottom>
@@ -2108,7 +2063,6 @@ const AdminPanel = () => {
                           </CardContent>
                         </Card>
                       </Grid>
-
                       {/* Süslemeler */}
                       <Grid item xs={12} md={4}>
                         <Card variant="outlined">
@@ -2124,7 +2078,6 @@ const AdminPanel = () => {
                           </CardContent>
                         </Card>
                       </Grid>
-
                       {/* Soslar */}
                       <Grid item xs={12} md={4}>
                         <Card variant="outlined">
@@ -2143,7 +2096,6 @@ const AdminPanel = () => {
                     </Grid>
                   )}
                 </Grid>
-
                 {/* Fotoğraflar */}
                 <Grid item xs={12}>
                   <Typography variant="h6" gutterBottom>
@@ -2171,7 +2123,6 @@ const AdminPanel = () => {
                         </Grid>
                       </Grid>
                     )}
-
                     {/* Sonrası Fotoğraflar */}
                     {selectedReport.afterPhotos && selectedReport.afterPhotos.length > 0 && (
                       <Grid item xs={12} md={4}>
@@ -2193,7 +2144,6 @@ const AdminPanel = () => {
                         </Grid>
                       </Grid>
                     )}
-
                     {/* Arıza Fotoğrafları */}
                     {selectedReport.issuePhotos && selectedReport.issuePhotos.length > 0 && (
                       <Grid item xs={12} md={4}>
@@ -2215,7 +2165,6 @@ const AdminPanel = () => {
                         </Grid>
                       </Grid>
                     )}
-
                     {(!selectedReport.beforePhotos || selectedReport.beforePhotos.length === 0) &&
                      (!selectedReport.afterPhotos || selectedReport.afterPhotos.length === 0) &&
                      (!selectedReport.issuePhotos || selectedReport.issuePhotos.length === 0) && (
@@ -2300,7 +2249,6 @@ const AdminPanel = () => {
               disabled={loading}
               sx={{ mb: 2 }}
             />
-
             <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
               <InputLabel>Rol</InputLabel>
               <Select
@@ -2314,7 +2262,6 @@ const AdminPanel = () => {
                 <MenuItem value="admin">Admin</MenuItem>
               </Select>
             </FormControl>
-
             <FormControlLabel
               control={
                 <Switch
@@ -2327,7 +2274,6 @@ const AdminPanel = () => {
               label="Kullanıcı Aktif"
               sx={{ mb: 2 }}
             />
-
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="body2">
                 <strong>Email:</strong> {editingUser?.email}
@@ -2363,7 +2309,7 @@ const AdminPanel = () => {
         fullWidth
       >
         <DialogTitle>
-          Ürün Düzenle: {editingCommodity?.['Product name']}
+          {editingCommodity ? `Ürün Düzenle: ${editingCommodity['Product name']}` : 'Yeni Ürün Ekle'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
